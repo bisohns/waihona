@@ -11,7 +11,27 @@ pub mod providers;
 
 //    }
 
-#[test]
-fn main() {
-    println!("Welcome to waihona");
+#[tokio::test]
+async fn test_bucket_exists() {
+    use crate::types::bucket::{Buckets, Bucket};
+    use rusoto_core::{Region};
+    let aws_buckets = providers::aws::AwsBuckets::new(
+        Region::UsEast2
+        );
+    let resp = aws_buckets.exists(
+        String::from("waihona")
+        ).await;
+    assert!(resp);
+}
+
+#[tokio::test]
+async fn test_bucket_open() {
+    use crate::types::bucket::{Buckets, Bucket};
+    use rusoto_core::{Region};
+    let aws_buckets = providers::aws::AwsBuckets::new(
+        Region::UsEast2
+        );
+    let resp = aws_buckets.open(
+        String::from("waihona"),
+        ).await.unwrap();
 }

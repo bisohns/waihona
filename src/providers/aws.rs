@@ -1,8 +1,12 @@
 use async_trait::async_trait;
 use crate::types::bucket::{Buckets, Bucket};
-//use crate::types::blob::{Blob};
-use rusoto_core::{Region};
-use rusoto_s3::{S3, S3Client};
+use crate::types::blob::{Blob};
+use crate::types::errors::{BucketResult, BucketError};
+use rusoto_core::{Region, RusotoError};
+use rusoto_s3::{
+    S3, S3Client, CreateBucketRequest, CreateBucketConfiguration,
+    DeleteBucketRequest
+};
 
 pub struct AwsBuckets{
     s3: S3Client,
@@ -14,7 +18,7 @@ pub struct AwsBucket{
 }
 
 impl AwsBucket {
-    fn new(name: String) -> Self {
+    pub fn new(name: String) -> Self {
         AwsBucket {
             name
         }
@@ -24,10 +28,12 @@ impl AwsBucket {
 
 #[derive(Debug)]
 pub struct AwsBlob;
+impl Blob for AwsBlob {
+}
 
 
 impl AwsBuckets {
-    fn new(region: Region) -> Self {
+    pub fn new(region: Region) -> Self {
         AwsBuckets {
             s3: S3Client::new(region)
         }
@@ -36,12 +42,12 @@ impl AwsBuckets {
 
 }
 
-impl Bucket for AwsBucket {
+impl Bucket<AwsBlob> for AwsBucket {
 }
 
 #[async_trait]
-impl Buckets for AwsBuckets {
-    async fn list(&self) -> Box<Vec<AwsBucket>> {
+impl Buckets<AwsBucket, AwsBlob> for AwsBuckets {
+    async fn list(&self) -> Vec<AwsBucket> {
         let resp = self.s3.list_buckets().await.unwrap();
         let mut buckets: Vec<AwsBucket> = Vec::new();
         for bucket in resp.buckets.unwrap().iter() {
@@ -52,7 +58,67 @@ impl Buckets for AwsBuckets {
                 buckets.push(bucket_found);
             }
         }
-        Box::new(buckets)
+        buckets
+    }
+
+    async fn open(&self, bucket_name: String) -> BucketResult<AwsBucket>{
+        if self.exists(bucket_name.clone()).await {
+            Ok(AwsBucket{name: bucket_name.clone()})
+        } else {
+            Err(BucketError::NotFound)
+        }
+    }
+
+    async fn create(&self, bucket_name: String, location: Option<String>) -> BucketResult<AwsBucket>{
+        let create_bucket_req = CreateBucketRequest{
+            bucket: bucket_name.clone(),
+            create_bucket_configuration: Some(CreateBucketConfiguration{
+                location_constraint: location
+            }),
+            ..Default::default()
+        };
+        let resp = self.s3.create_bucket(create_bucket_req).await;
+        match resp {
+            Ok(_) => Ok(AwsBucket{name: bucket_name.clone()}),
+            Err(e) => {
+                Err(BucketError::CreationError(
+                    String::from(format!("{}",e))
+                    ))
+            },
+        }
+
+    }
+
+    async fn delete(&self, bucket_name: String) -> BucketResult<bool> {
+        if self.exists(bucket_name.clone()).await {
+            let delete_bucket_req = DeleteBucketRequest{
+                bucket: bucket_name.clone(),
+                ..Default::default()
+            };
+
+            let resp = self.s3.delete_bucket(delete_bucket_req).await;
+            match resp {
+                Ok(_) => Ok(true),
+                Err(e) => {
+                    Err(BucketError::DeletionError(
+                            String::from(format!("{}", e))
+                            ))
+                },
+            }
+        } else {
+            Err(BucketError::NotFound)
+        }
+
+    }
+    
+    async fn exists(&self, bucket_name: String) -> bool {
+        let bucket_list = self.list().await;
+        for bucket in bucket_list {
+            if bucket.name == bucket_name {
+                return true
+            }
+        }
+        false
     }
 
 }

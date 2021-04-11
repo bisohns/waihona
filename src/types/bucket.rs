@@ -6,28 +6,29 @@ use crate::types::errors::{
     BucketResult,
     BlobResult};
 
+
 /// Collection of buckets, can be used to list, create
 /// open, delete buckets
 #[async_trait]
-pub trait Buckets {
+pub trait Buckets<T, P> 
+    where T: Bucket<P>, P: Blob{
     /// Open an existing bucket 
-//    async fn open<T>(&self, bucket_name: String) -> BucketResult<T>
-//        where T: Bucket;
-//    /// Create a bucket
-//    async fn create<T>(&self, bucket_name: String) -> BucketResult<T>
-//        where T: Bucket;
+    async fn open(&self, bucket_name: String) -> BucketResult<T>;
+    /// Create a bucket at location
+    async fn create(&self, bucket_name: String, location: Option<String>) -> BucketResult<T>;
     /// List all buckets
-    async fn list(&self) -> Box<Vec<dyn Bucket>>;
-//    /// Delete a bucket
-//    async fn delete(&self, bucket_name: String) -> BucketResult<bool>;
-//    /// Check if a bucket exists
-//    async fn exists(&self, bucket_name: String) -> bool;
+    async fn list(&self) -> Vec<T>;
+    /// Delete a bucket
+    async fn delete(&self, bucket_name: String) -> BucketResult<bool>;
+    /// Check if a bucket exists
+    async fn exists(&self, bucket_name: String) -> bool;
 }
 
 /// Bucket delete single object, can create blob,
 /// delete blob and retrieve blob
 #[async_trait]
-pub trait Bucket {
+pub trait Bucket<P>
+    where P: Blob{
 //    /// Delete this particular bucket
 //    async fn delete(&self) -> BucketResult<bool>;
 //    /// Retrieve a blob from this bucket
@@ -38,6 +39,6 @@ pub trait Bucket {
 //        where T: Blob;
 //    /// Delete a blob from bucket
 //    async fn delete_blob(&self, blob_name: String) -> BlobResult<bool>;
-//    /// Check if a blob exists
+//    /// Check if a blob exists in bucket
 //    async fn exists(&self, blob_name: String) -> bool;
 }
