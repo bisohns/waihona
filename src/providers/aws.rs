@@ -2,32 +2,50 @@ use async_trait::async_trait;
 use crate::types::bucket::{Buckets, Bucket};
 use crate::types::blob::{Blob};
 use crate::types::errors::{BucketResult, BucketError};
-use rusoto_core::{Region, RusotoError};
+use rusoto_core::{Region};
 use rusoto_s3::{
     S3, S3Client, CreateBucketRequest, CreateBucketConfiguration,
-    DeleteBucketRequest
+    DeleteBucketRequest, ListObjectsRequest,
+
 };
 
 pub struct AwsBuckets{
     s3: S3Client,
 }
 
-#[derive(Debug)]
 pub struct AwsBucket{
     name: String,
+    s3: S3Client,
 }
 
 impl AwsBucket {
-    pub fn new(name: String) -> Self {
+    pub fn new(name: String, s3: S3Client) -> Self {
         AwsBucket {
-            name
+            name,
+            s3,
         }
 
     }
 }
 
 #[derive(Debug)]
-pub struct AwsBlob;
+pub struct AwsBlob {
+    key: Option<String>,
+    e_tag: Option<String>,
+    size: Option<i64>,
+}
+impl AwsBlob {
+    pub fn new(key: Option<String>, e_tag: Option<String>, size: Option<i64>) -> Self {
+        AwsBlob {
+            key,
+            e_tag,
+            size,
+        }
+
+    }
+}
+
+#[async_trait]
 impl Blob for AwsBlob {
 }
 
@@ -42,7 +60,37 @@ impl AwsBuckets {
 
 }
 
+#[async_trait]
 impl Bucket<AwsBlob> for AwsBucket {
+    async fn list_blobs(&self, marker: Option<String>) -> BucketResult<Vec<AwsBlob>> {
+        let list_blob_req = ListObjectsRequest{
+            bucket: self.name.clone(),
+            marker,
+            ..Default::default()
+        };
+        let resp = self.s3.list_objects(list_blob_req).await;
+        match resp {
+            Ok(k) => {
+                let contents = k.contents.unwrap();
+                let mut ret: Vec<AwsBlob> = Vec::new();
+                for obj in contents.iter() {
+                    ret.push(
+                        AwsBlob::new(
+                            obj.key.clone(),
+                            obj.e_tag.clone(),
+                            obj.size
+                            )
+                        )
+                }
+                Ok(ret)
+            },
+            Err(e) => {
+                Err(BucketError::ListError(
+                    String::from(format!("{}",e))
+                    ))
+            },
+        }
+    }
 }
 
 #[async_trait]
@@ -53,7 +101,8 @@ impl Buckets<AwsBucket, AwsBlob> for AwsBuckets {
         for bucket in resp.buckets.unwrap().iter() {
             if bucket.name.is_some(){
                 let bucket_found = AwsBucket::new(
-                    String::from(bucket.name.clone().unwrap())
+                    String::from(bucket.name.clone().unwrap()),
+                    self.s3.clone()
                     );
                 buckets.push(bucket_found);
             }
@@ -63,7 +112,10 @@ impl Buckets<AwsBucket, AwsBlob> for AwsBuckets {
 
     async fn open(&self, bucket_name: String) -> BucketResult<AwsBucket>{
         if self.exists(bucket_name.clone()).await {
-            Ok(AwsBucket{name: bucket_name.clone()})
+            Ok(AwsBucket{
+                name: bucket_name.clone(),
+                s3: self.s3.clone(),
+            })
         } else {
             Err(BucketError::NotFound)
         }
@@ -79,7 +131,10 @@ impl Buckets<AwsBucket, AwsBlob> for AwsBuckets {
         };
         let resp = self.s3.create_bucket(create_bucket_req).await;
         match resp {
-            Ok(_) => Ok(AwsBucket{name: bucket_name.clone()}),
+            Ok(_) => Ok(AwsBucket{
+                name: bucket_name.clone(),
+                s3: self.s3.clone()
+            }),
             Err(e) => {
                 Err(BucketError::CreationError(
                     String::from(format!("{}",e))

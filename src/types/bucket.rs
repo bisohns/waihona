@@ -29,6 +29,8 @@ pub trait Buckets<T, P>
 #[async_trait]
 pub trait Bucket<P>
     where P: Blob{
+    /// List all blobs
+    async fn list_blobs(&self, marker: Option<String>) -> BucketResult<Vec<P>>;
 //    /// Delete this particular bucket
 //    async fn delete(&self) -> BucketResult<bool>;
 //    /// Retrieve a blob from this bucket

@@ -31,7 +31,9 @@ async fn test_bucket_open() {
     let aws_buckets = providers::aws::AwsBuckets::new(
         Region::UsEast2
         );
-    let resp = aws_buckets.open(
+    let waihona = aws_buckets.open(
         String::from("waihona"),
         ).await.unwrap();
+    let blobs = waihona.list_blobs(None).await;
+    println!("{:?}", blobs);
 }

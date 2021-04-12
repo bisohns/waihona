@@ -7,6 +7,8 @@ pub enum BucketError {
     CreationError(String),
     /// Bucket deletion error
     DeletionError(String),
+    /// Bucket listing error
+    ListError(String),
 }
 
 /// Blob based errors
