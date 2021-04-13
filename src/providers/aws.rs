@@ -44,7 +44,8 @@ pub struct AwsBlob {
     size: Option<i64>,
     body: Option<StreamingBody>,
     content_type: Option<String>,
-    content_range: Option<String>
+    content_range: Option<String>,
+    bucket: String,
 }
 impl AwsBlob {
     pub fn new(key: Option<String>, 
@@ -52,7 +53,8 @@ impl AwsBlob {
                size: Option<i64>, 
                body: Option<StreamingBody>, 
                content_type: Option<String>,
-               content_range: Option<String>
+               content_range: Option<String>,
+               bucket: String,
                ) -> Self {
         AwsBlob {
             key,
@@ -60,7 +62,8 @@ impl AwsBlob {
             size,
             body,
             content_type,
-            content_range
+            content_range,
+            bucket
         }
 
     }
@@ -69,6 +72,16 @@ impl AwsBlob {
 #[async_trait]
 impl Blob for AwsBlob {
     async fn delete(&self) -> BlobResult<bool> {
+        let bucket = AwsBucket::new(self.bucket.clone(), None);
+        let resp = bucket.delete_blob(self.key.as_ref().unwrap().clone()).await;
+        match resp {
+            Ok(_) => Ok(true),
+            Err(e) => {
+                Err(BlobError::DeletionError(
+                    String::from(format!("{:?}",e))
+                    ))
+            },
+        }
 
     }
 
@@ -123,6 +136,7 @@ impl Bucket<AwsBlob> for AwsBucket {
                             None,
                             None,
                             None,
+                            self.name.clone()
                             )
                         )
                 }
@@ -169,7 +183,8 @@ impl Bucket<AwsBlob> for AwsBucket {
                     k.content_length.clone(),
                     k.body,
                     k.content_type,
-                    k.content_range
+                    k.content_range,
+                    self.name.clone()
                     );
                 Ok(blob)
             },

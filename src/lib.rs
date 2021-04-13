@@ -54,7 +54,9 @@ async fn test_get_blob() {
         None
         ).await
         .unwrap();
-    let res = blob.read().await.unwrap();
-    let res_str = std::str::from_utf8(&res);
-    println!("{:?}", res_str);
+//    let res = blob.read().await.unwrap();
+//    let res_str = std::str::from_utf8(&res);
+//    println!("{:?}", res_str);
+    let res = blob.delete().await;
+    println!("{:?}", res);
 }
