@@ -10,6 +10,11 @@ pub trait Blob {
 //    async fn new(&self, blob_name: String) -> Self;
     /// Delete blob
     async fn delete(&self) -> BlobResult<bool>;
+    /// copy blob
+    async fn copy(&self,
+                  blob_destination_path: String,
+                  content_type: Option<String>
+                  ) -> BlobResult<bool>;
 //    /// Write to blob
 //    async fn write(&self);
     /// Read from blob

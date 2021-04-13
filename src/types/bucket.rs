@@ -37,6 +37,14 @@ pub trait Bucket<P>
     /// Specify blob_path e.g "pictures/image1.png"
     /// content_range is range to retrieve at once, if None, retrieve entire object
     async fn get_blob(&self, blob_path: String, content_range: Option<String>) -> BlobResult<P>;
+    /// copy blob_path to another blob path
+    /// blob_destination_path is formated as {bucket_name}/{path}
+    /// e.g bucket1/folder/simple.jpeg
+    /// specify content_type for destination file
+    async fn copy_blob(&self,
+                       blob_path: String, 
+                       blob_destination_path: String,
+                       content_type: Option<String>) -> BlobResult<P>;
 //    /// Create a blob in bucket
 //    async fn create_blob<T>(&self, blob_name: String) -> BlobResult<T>
 //        where T: Blob;

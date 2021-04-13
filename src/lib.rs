@@ -54,9 +54,20 @@ async fn test_get_blob() {
         None
         ).await
         .unwrap();
-//    let res = blob.read().await.unwrap();
-//    let res_str = std::str::from_utf8(&res);
-//    println!("{:?}", res_str);
-    let res = blob.delete().await;
-    println!("{:?}", res);
+    let res = blob.read().await.unwrap();
+    let res_str = std::str::from_utf8(&res);
+    println!("{:?}", res_str);
+//    let cp_blob = waihona.copy_blob(
+//        "reka-store.txt".to_owned(),
+//        "waihona/copy-reka.txt".to_owned(),
+//        None
+//        ).await
+//        .unwrap();
+//    println!("{:?}", cp_blob);
+//    cp_blob.copy(
+//        "waihona/sec-copy.txt".to_owned(),
+//        None
+//        ).await;
+//    let res = blob.delete().await;
+//    println!("{:?}", res);
 }

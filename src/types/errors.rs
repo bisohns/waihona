@@ -1,5 +1,6 @@
+use strum_macros::Display;
 /// Bucket based errors
-#[derive(Debug)]
+#[derive(Debug, Display)]
 pub enum BucketError {
     /// Bucket specified was not found
     NotFound,
@@ -12,7 +13,7 @@ pub enum BucketError {
 }
 
 /// Blob based errors
-#[derive(Debug)]
+#[derive(Debug, Display)]
 pub enum BlobError {
     /// Blob specified was not found
     NotFound,
@@ -22,6 +23,8 @@ pub enum BlobError {
     ReadError,
     /// Could not delete blob
     DeletionError(String),
+    /// Could not copy blob
+    CopyError(String),
 }
 
 /// Provider based errors

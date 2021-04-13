@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use regex::Regex;
 use bytes::Bytes;
 use crate::types::bucket::{Buckets, Bucket};
 //use futures::{StreamExt, TryStreamExt};
@@ -8,10 +9,12 @@ use crate::types::errors::{
     BucketResult, BucketError, BlobResult,BlobError
 };
 use rusoto_core::{Region};
+use rusoto_core::credential::{AwsCredentials};
+//use std::string::ToString;
 use rusoto_s3::{
     S3, S3Client, CreateBucketRequest, CreateBucketConfiguration,
     DeleteBucketRequest, ListObjectsRequest, GetObjectRequest, StreamingBody,
-    DeleteObjectRequest,
+    DeleteObjectRequest, CopyObjectRequest,
 };
 
 pub struct AwsBuckets{
@@ -78,7 +81,26 @@ impl Blob for AwsBlob {
             Ok(_) => Ok(true),
             Err(e) => {
                 Err(BlobError::DeletionError(
-                    String::from(format!("{:?}",e))
+                    String::from(format!("{}",e))
+                    ))
+            },
+        }
+
+    }
+
+    async fn copy(&self,
+                    blob_destination_path: String,
+                    content_type: Option<String>) -> BlobResult<bool> {
+        let bucket = AwsBucket::new(self.bucket.clone(), None);
+        let resp = bucket.copy_blob(
+            self.key.as_ref().unwrap().clone(),
+            blob_destination_path,
+            content_type).await;
+        match resp {
+            Ok(_) => Ok(true),
+            Err(e) => {
+                Err(BlobError::CopyError(
+                    String::from(format!("{}",e))
                     ))
             },
         }
@@ -147,6 +169,50 @@ impl Bucket<AwsBlob> for AwsBucket {
                     String::from(format!("{}",e))
                     ))
             },
+        }
+    }
+
+    async fn copy_blob(&self, 
+                       blob_path: String, 
+                       blob_destination_path: String,
+                       content_type: Option<String>) -> BlobResult<AwsBlob> {
+        let copy_source = format!("{}/{}", self.name.clone(), blob_path.clone());
+        let re = Regex::new(r"(?P<bucket>.*?)/(?P<blob_path>.*)").unwrap();
+        if let Some(captures) = re.captures(&blob_destination_path[..]) {
+            let bucket = captures
+                .name("bucket")
+                .unwrap().as_str().to_owned();
+            let key = captures
+                .name("blob_path")
+                .unwrap().as_str().to_owned();
+            let copy_blob_req = CopyObjectRequest{
+                bucket: bucket.clone(),
+                key: key.clone(),
+                copy_source,
+                ..Default::default()
+            };
+            let resp = self.s3.copy_object(copy_blob_req).await;
+            match resp {
+                Ok(_) => Ok(
+                    AwsBlob::new(
+                        Some(key),
+                        None,
+                        None,
+                        None,
+                        content_type,
+                        None,
+                        bucket,
+                        )
+                    ),
+                Err(e) => {
+                    Err(BlobError::CopyError(
+                            String::from(format!("{}",e))
+                            ))
+                },
+            }
+        } else {
+            return Err(BlobError::CopyError(
+                    String::from(r"Format blob_destination_path as {bucket}/{blob_path}")))
         }
     }
 
