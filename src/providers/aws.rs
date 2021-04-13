@@ -1,7 +1,8 @@
 use async_trait::async_trait;
 use bytes::Bytes;
 use crate::types::bucket::{Buckets, Bucket};
-use futures::{StreamExt, TryStreamExt};
+//use futures::{StreamExt, TryStreamExt};
+use futures::{TryStreamExt};
 use crate::types::blob::{Blob};
 use crate::types::errors::{
     BucketResult, BucketError, BlobResult,BlobError
@@ -9,7 +10,8 @@ use crate::types::errors::{
 use rusoto_core::{Region};
 use rusoto_s3::{
     S3, S3Client, CreateBucketRequest, CreateBucketConfiguration,
-    DeleteBucketRequest, ListObjectsRequest, GetObjectRequest, StreamingBody
+    DeleteBucketRequest, ListObjectsRequest, GetObjectRequest, StreamingBody,
+    DeleteObjectRequest,
 };
 
 pub struct AwsBuckets{
@@ -22,12 +24,16 @@ pub struct AwsBucket{
 }
 
 impl AwsBucket {
-    pub fn new(name: String, s3: S3Client) -> Self {
-        AwsBucket {
-            name,
-            s3,
+    pub fn new(name: String, s3: Option<S3Client>) -> Self {
+        match s3 {
+            Some(a) => AwsBucket {name,s3: a},
+            None => {
+                AwsBucket {
+                    name,
+                    s3: S3Client::new(Region::UsEast2)
+                }
+            }
         }
-
     }
 }
 
@@ -62,6 +68,10 @@ impl AwsBlob {
 
 #[async_trait]
 impl Blob for AwsBlob {
+    async fn delete(&self) -> BlobResult<bool> {
+
+    }
+
     async fn read(&mut self) -> BlobResult<Bytes> {
         match self.body {
             Some(ref mut res) => {
@@ -126,6 +136,23 @@ impl Bucket<AwsBlob> for AwsBucket {
         }
     }
 
+    async fn delete_blob(&self, blob_path: String) -> BlobResult<bool> {
+        let delete_blob_req = DeleteObjectRequest{
+            bucket: self.name.clone(),
+            key: blob_path.clone(),
+            ..Default::default()
+        };
+        let resp = self.s3.delete_object(delete_blob_req).await;
+        match resp {
+            Ok(_) => Ok(true),
+            Err(e) => {
+                Err(BlobError::DeletionError(
+                    String::from(format!("{}",e))
+                    ))
+            },
+        }
+    }
+
     async fn get_blob(&self, blob_path: String, content_range: Option<String>) -> BlobResult<AwsBlob> {
         let get_blob_req = GetObjectRequest{
             bucket: self.name.clone(),
@@ -164,7 +191,7 @@ impl Buckets<AwsBucket, AwsBlob> for AwsBuckets {
             if bucket.name.is_some(){
                 let bucket_found = AwsBucket::new(
                     String::from(bucket.name.clone().unwrap()),
-                    self.s3.clone()
+                    Some(self.s3.clone())
                     );
                 buckets.push(bucket_found);
             }

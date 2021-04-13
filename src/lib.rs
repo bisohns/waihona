@@ -13,7 +13,7 @@ pub mod providers;
 
 #[tokio::test]
 async fn test_bucket_exists() {
-    use crate::types::bucket::{Buckets, Bucket};
+    use crate::types::bucket::{Buckets};
     use rusoto_core::{Region};
     let aws_buckets = providers::aws::AwsBuckets::new(
         Region::UsEast2

@@ -41,7 +41,7 @@ pub trait Bucket<P>
 //    async fn create_blob<T>(&self, blob_name: String) -> BlobResult<T>
 //        where T: Blob;
     /// Delete a blob from bucket
-    async fn delete_blob(&self, blob_name: String) -> BlobResult<bool>;
+    async fn delete_blob(&self, blob_path: String) -> BlobResult<bool>;
 //    /// Check if a blob exists in bucket
 //    async fn exists(&self, blob_name: String) -> bool;
 }

@@ -8,8 +8,8 @@ use crate::types::errors::{BlobResult};
 pub trait Blob {
 //    /// Create a new blob object name
 //    async fn new(&self, blob_name: String) -> Self;
-//    /// Delete blob
-//    async fn delete(&self);
+    /// Delete blob
+    async fn delete(&self) -> BlobResult<bool>;
 //    /// Write to blob
 //    async fn write(&self);
     /// Read from blob

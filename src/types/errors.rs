@@ -20,6 +20,8 @@ pub enum BlobError {
     GetError(String),
     /// Blob could not be read
     ReadError,
+    /// Could not delete blob
+    DeletionError(String),
 }
 
 /// Provider based errors
