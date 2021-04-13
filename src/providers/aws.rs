@@ -1,12 +1,15 @@
 use async_trait::async_trait;
+use bytes::Bytes;
 use crate::types::bucket::{Buckets, Bucket};
+use futures::{StreamExt, TryStreamExt};
 use crate::types::blob::{Blob};
-use crate::types::errors::{BucketResult, BucketError};
+use crate::types::errors::{
+    BucketResult, BucketError, BlobResult,BlobError
+};
 use rusoto_core::{Region};
 use rusoto_s3::{
     S3, S3Client, CreateBucketRequest, CreateBucketConfiguration,
-    DeleteBucketRequest, ListObjectsRequest,
-
+    DeleteBucketRequest, ListObjectsRequest, GetObjectRequest, StreamingBody
 };
 
 pub struct AwsBuckets{
@@ -33,13 +36,25 @@ pub struct AwsBlob {
     key: Option<String>,
     e_tag: Option<String>,
     size: Option<i64>,
+    body: Option<StreamingBody>,
+    content_type: Option<String>,
+    content_range: Option<String>
 }
 impl AwsBlob {
-    pub fn new(key: Option<String>, e_tag: Option<String>, size: Option<i64>) -> Self {
+    pub fn new(key: Option<String>, 
+               e_tag: Option<String>, 
+               size: Option<i64>, 
+               body: Option<StreamingBody>, 
+               content_type: Option<String>,
+               content_range: Option<String>
+               ) -> Self {
         AwsBlob {
             key,
             e_tag,
             size,
+            body,
+            content_type,
+            content_range
         }
 
     }
@@ -47,6 +62,20 @@ impl AwsBlob {
 
 #[async_trait]
 impl Blob for AwsBlob {
+    async fn read(&mut self) -> BlobResult<Bytes> {
+        match self.body {
+            Some(ref mut res) => {
+                let body = res.map_ok(|b| bytes::BytesMut::from(&b[..]))
+                    .try_concat()
+                    .await
+                    .unwrap();
+                Ok(body.freeze())
+            },
+            None => {
+                Err(BlobError::ReadError)
+            }
+        }
+    }
 }
 
 
@@ -62,7 +91,9 @@ impl AwsBuckets {
 
 #[async_trait]
 impl Bucket<AwsBlob> for AwsBucket {
-    async fn list_blobs(&self, marker: Option<String>) -> BucketResult<Vec<AwsBlob>> {
+    /// Each AwsBlob does not have a body/content_type/content_range
+    /// as those can only be gotten via a get_blob request
+    async fn list_blobs(&self, marker: Option<String>) -> BucketResult<(Vec<AwsBlob>, Option<String>)> {
         let list_blob_req = ListObjectsRequest{
             bucket: self.name.clone(),
             marker,
@@ -78,14 +109,45 @@ impl Bucket<AwsBlob> for AwsBucket {
                         AwsBlob::new(
                             obj.key.clone(),
                             obj.e_tag.clone(),
-                            obj.size
+                            obj.size,
+                            None,
+                            None,
+                            None,
                             )
                         )
                 }
-                Ok(ret)
+                Ok((ret, k.next_marker))
             },
             Err(e) => {
                 Err(BucketError::ListError(
+                    String::from(format!("{}",e))
+                    ))
+            },
+        }
+    }
+
+    async fn get_blob(&self, blob_path: String, content_range: Option<String>) -> BlobResult<AwsBlob> {
+        let get_blob_req = GetObjectRequest{
+            bucket: self.name.clone(),
+            key: blob_path.clone(),
+            range: content_range,
+            ..Default::default()
+        };
+        let resp = self.s3.get_object(get_blob_req).await;
+        match resp {
+            Ok(k) => {
+                let blob = AwsBlob::new(
+                    Some(blob_path),
+                    k.e_tag.clone(),
+                    k.content_length.clone(),
+                    k.body,
+                    k.content_type,
+                    k.content_range
+                    );
+                Ok(blob)
+            },
+            Err(e) => {
+                Err(BlobError::GetError(
                     String::from(format!("{}",e))
                     ))
             },

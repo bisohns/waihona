@@ -16,6 +16,10 @@ pub enum BucketError {
 pub enum BlobError {
     /// Blob specified was not found
     NotFound,
+    /// Blob could not be gotten
+    GetError(String),
+    /// Blob could not be read
+    ReadError,
 }
 
 /// Provider based errors

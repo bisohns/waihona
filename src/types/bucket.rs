@@ -1,8 +1,6 @@
 use async_trait::async_trait;
 use crate::types::blob::{Blob};
 use crate::types::errors::{
-    BucketError, 
-    BlobError,
     BucketResult,
     BlobResult};
 
@@ -30,12 +28,15 @@ pub trait Buckets<T, P>
 pub trait Bucket<P>
     where P: Blob{
     /// List all blobs
-    async fn list_blobs(&self, marker: Option<String>) -> BucketResult<Vec<P>>;
+    /// Returns Ok((Vec<P>, Option<String>)) where Option<String> is the
+    /// next marker to use in listing blobs
+    async fn list_blobs(&self, marker: Option<String>) -> BucketResult<(Vec<P>, Option<String>)>;
 //    /// Delete this particular bucket
 //    async fn delete(&self) -> BucketResult<bool>;
-//    /// Retrieve a blob from this bucket
-//    async fn get_blob<T>(&self, blob_name: String) -> BlobResult<T>
-//        where T: Blob;
+    /// Retrieve a blob from this bucket
+    /// Specify blob_path e.g "pictures/image1.png"
+    /// content_range is range to retrieve at once, if None, retrieve entire object
+    async fn get_blob(&self, blob_path: String, content_range: Option<String>) -> BlobResult<P>;
 //    /// Create a blob in bucket
 //    async fn create_blob<T>(&self, blob_name: String) -> BlobResult<T>
 //        where T: Blob;

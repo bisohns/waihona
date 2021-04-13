@@ -1,4 +1,6 @@
 use async_trait::async_trait;
+use bytes::Bytes;
+use crate::types::errors::{BlobResult};
 
 #[async_trait]
 /// Blob can be used to write to blob, read from blob 
@@ -10,6 +12,6 @@ pub trait Blob {
 //    async fn delete(&self);
 //    /// Write to blob
 //    async fn write(&self);
-//    /// Read from blob
-//    async fn read(&self);
+    /// Read from blob
+    async fn read(&mut self) -> BlobResult<Bytes>;
 }
