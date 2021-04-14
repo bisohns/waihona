@@ -12,6 +12,7 @@ pub mod providers;
 //    }
 
 #[tokio::test]
+#[cfg(feature = "aws")]
 async fn test_bucket_exists() {
     use crate::types::bucket::{Buckets};
     use rusoto_core::{Region};
@@ -25,6 +26,7 @@ async fn test_bucket_exists() {
 }
 
 #[tokio::test]
+#[cfg(feature = "aws")]
 async fn test_bucket_open() {
     use crate::types::bucket::{Buckets, Bucket};
     use rusoto_core::{Region};
@@ -39,6 +41,7 @@ async fn test_bucket_open() {
 }
 
 #[tokio::test]
+#[cfg(feature = "aws")]
 async fn test_get_blob() {
     use crate::types::bucket::{Buckets, Bucket};
     use crate::types::blob::{Blob};
