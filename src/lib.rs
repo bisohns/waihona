@@ -42,6 +42,7 @@ async fn test_bucket_open() {
 async fn test_get_blob() {
     use crate::types::bucket::{Buckets, Bucket};
     use crate::types::blob::{Blob};
+    use bytes::Bytes;
     use rusoto_core::{Region};
     let aws_buckets = providers::aws::AwsBuckets::new(
         Region::UsEast2
@@ -54,9 +55,16 @@ async fn test_get_blob() {
         None
         ).await
         .unwrap();
+
     let res = blob.read().await.unwrap();
     let res_str = std::str::from_utf8(&res);
     println!("{:?}", res_str);
+//    // write data to blob
+//    let res_write = waihona.write_blob(
+//        "copy-reka.txt".to_owned(),
+//        Some(Bytes::from("Hello world"))
+//        ).await
+//        .unwrap();
 //    let cp_blob = waihona.copy_blob(
 //        "reka-store.txt".to_owned(),
 //        "waihona/copy-reka.txt".to_owned(),

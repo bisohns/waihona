@@ -14,7 +14,7 @@ use rusoto_core::credential::{AwsCredentials};
 use rusoto_s3::{
     S3, S3Client, CreateBucketRequest, CreateBucketConfiguration,
     DeleteBucketRequest, ListObjectsRequest, GetObjectRequest, StreamingBody,
-    DeleteObjectRequest, CopyObjectRequest,
+    DeleteObjectRequest, CopyObjectRequest, PutObjectRequest
 };
 
 pub struct AwsBuckets{
@@ -100,6 +100,23 @@ impl Blob for AwsBlob {
             Ok(_) => Ok(true),
             Err(e) => {
                 Err(BlobError::CopyError(
+                    String::from(format!("{}",e))
+                    ))
+            },
+        }
+
+    }
+
+    async fn write(&self,
+                    content: Option<Bytes>) -> BlobResult<bool> {
+        let bucket = AwsBucket::new(self.bucket.clone(), None);
+        let resp = bucket.write_blob(
+            self.key.as_ref().unwrap().clone(),
+            content).await;
+        match resp {
+            Ok(_) => Ok(true),
+            Err(e) => {
+                Err(BlobError::WriteError(
                     String::from(format!("{}",e))
                     ))
             },
@@ -213,6 +230,35 @@ impl Bucket<AwsBlob> for AwsBucket {
         } else {
             return Err(BlobError::CopyError(
                     String::from(r"Format blob_destination_path as {bucket}/{blob_path}")))
+        }
+    }
+
+    async fn write_blob(&self, blob_path: String, content: Option<Bytes>) -> BlobResult<AwsBlob>
+    {
+        let put_blob_req = PutObjectRequest {
+            bucket: self.name.to_owned(),
+            key: blob_path.clone(),
+            body: Some(content.unwrap().to_vec().into()),
+            ..Default::default()
+        };
+        let resp = self.s3.put_object(put_blob_req).await;
+        match resp {
+            Ok(k) => Ok(
+                AwsBlob::new(
+                    Some(blob_path),
+                    k.e_tag,
+                    None,
+                    None,
+                    None,
+                    None,
+                    self.name.to_owned()
+                    )
+                ),
+            Err(e) => {
+                Err(BlobError::WriteError(
+                    String::from(format!("{}",e))
+                    ))
+            },
         }
     }
 

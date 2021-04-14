@@ -25,6 +25,8 @@ pub enum BlobError {
     DeletionError(String),
     /// Could not copy blob
     CopyError(String),
+    /// Could not write blob
+    WriteError(String),
 }
 
 /// Provider based errors
