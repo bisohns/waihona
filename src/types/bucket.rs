@@ -12,15 +12,15 @@ use crate::types::errors::{
 pub trait Buckets<T, P> 
     where T: Bucket<P>, P: Blob{
     /// Open an existing bucket 
-    async fn open(&self, bucket_name: String) -> BucketResult<T>;
+    async fn open(&mut self, bucket_name: String) -> BucketResult<T>;
     /// Create a bucket at location
-    async fn create(&self, bucket_name: String, location: Option<String>) -> BucketResult<T>;
+    async fn create(&mut self, bucket_name: String, location: Option<String>) -> BucketResult<T>;
     /// List all buckets
-    async fn list(&self) -> Vec<T>;
+    async fn list(&mut self) -> Vec<T>;
     /// Delete a bucket
-    async fn delete(&self, bucket_name: String) -> BucketResult<bool>;
+    async fn delete(&mut self, bucket_name: String) -> BucketResult<bool>;
     /// Check if a bucket exists
-    async fn exists(&self, bucket_name: String) -> bool;
+    async fn exists(&mut self, bucket_name: String) -> bool;
 }
 
 /// Bucket delete single object, can create blob,

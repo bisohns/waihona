@@ -1,10 +1,18 @@
 [package]
 name = "waihona"
 version = "0.1.0"
-authors = ["Diretnan Domnan <diretnandomnan@gmail.com>"]
+authors = ["Diretnan Domnan <diretnandomnan@gmail.com>", "Wisdom Praise <wisdompraise968@gmail.com"]
 edition = "2018"
+categories = ["web-programming", "asynchronous", "api-bindings"]
+keywords = ["web-programming", "cloud", "cloud storage", "aws", "gcp", "azure", "blob", "bucket"]
+license-file = "LICENSE"
+repository = "https://github.com/bisoncorps/waihona"
+documentation = "https://docs.rs/waihona"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[badges]
+maintenance = { status = "actively-developed" }
 
 [dependencies]
 async-trait = "0.1.48"
@@ -13,10 +21,11 @@ futures = "0.3"
 regex = "1.4.5"
 rusoto_core = { version = "0.46.0", optional = true }
 rusoto_s3 = { version = "0.46.0", optional = true }
+google-cloud = { version = "0.2.1", features = ["storage"], optional = true }
 strum_macros = "0.20.1"
-tokio = "1.0"
+tokio = "1.4.0"
 
 [features]
 aws = [ "rusoto_core", "rusoto_s3"]
-gcp = []
+gcp = [ "google-cloud" ]
 azure = []

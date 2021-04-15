@@ -311,7 +311,7 @@ impl Bucket<AwsBlob> for AwsBucket {
 
 #[async_trait]
 impl Buckets<AwsBucket, AwsBlob> for AwsBuckets {
-    async fn list(&self) -> Vec<AwsBucket> {
+    async fn list(&mut self) -> Vec<AwsBucket> {
         let resp = self.s3.list_buckets().await.unwrap();
         let mut buckets: Vec<AwsBucket> = Vec::new();
         for bucket in resp.buckets.unwrap().iter() {
@@ -326,7 +326,7 @@ impl Buckets<AwsBucket, AwsBlob> for AwsBuckets {
         buckets
     }
 
-    async fn open(&self, bucket_name: String) -> BucketResult<AwsBucket>{
+    async fn open(&mut self, bucket_name: String) -> BucketResult<AwsBucket>{
         if self.exists(bucket_name.clone()).await {
             Ok(AwsBucket{
                 name: bucket_name.clone(),
@@ -337,7 +337,7 @@ impl Buckets<AwsBucket, AwsBlob> for AwsBuckets {
         }
     }
 
-    async fn create(&self, bucket_name: String, location: Option<String>) -> BucketResult<AwsBucket>{
+    async fn create(&mut self, bucket_name: String, location: Option<String>) -> BucketResult<AwsBucket>{
         let create_bucket_req = CreateBucketRequest{
             bucket: bucket_name.clone(),
             create_bucket_configuration: Some(CreateBucketConfiguration{
@@ -360,7 +360,7 @@ impl Buckets<AwsBucket, AwsBlob> for AwsBuckets {
 
     }
 
-    async fn delete(&self, bucket_name: String) -> BucketResult<bool> {
+    async fn delete(&mut self, bucket_name: String) -> BucketResult<bool> {
         if self.exists(bucket_name.clone()).await {
             let delete_bucket_req = DeleteBucketRequest{
                 bucket: bucket_name.clone(),
@@ -382,7 +382,7 @@ impl Buckets<AwsBucket, AwsBlob> for AwsBuckets {
 
     }
     
-    async fn exists(&self, bucket_name: String) -> bool {
+    async fn exists(&mut self, bucket_name: String) -> bool {
         let bucket_list = self.list().await;
         for bucket in bucket_list {
             if bucket.name == bucket_name {
