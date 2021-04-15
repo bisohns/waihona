@@ -7,6 +7,7 @@ use crate::types::errors::{
 use google_cloud::storage::{
     Bucket as StorageBucket, Client
 };
+use google_storage1::api::Storage;
 
 //macro_rules! assert_ok {
 //    ($expr:expr) => {
@@ -75,7 +76,7 @@ impl Buckets<GcpBucket, GcpBlob> for GcpBuckets {
                     None,
                     Some(bucket)
                     ).await
-                )
+              )
         } else {
             Err(BucketError::NotFound)
         }
