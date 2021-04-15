@@ -28,24 +28,24 @@ pub trait Buckets<T, P>
 #[async_trait]
 pub trait Bucket<P>
     where P: Blob{
-    /// List all blobs
-    /// Returns Ok((Vec<P>, Option<String>)) where Option<String> is the
-    /// next marker to use in listing blobs
-    async fn list_blobs(&self, marker: Option<String>) -> BucketResult<(Vec<P>, Option<String>)>;
-    /// Retrieve a blob from this bucket
-    /// Specify blob_path e.g "pictures/image1.png"
-    /// content_range is range to retrieve at once, if None, retrieve entire object
-    async fn get_blob(&self, blob_path: String, content_range: Option<String>) -> BlobResult<P>;
-    /// copy blob_path to another blob path
-    /// blob_destination_path is formated as {bucket_name}/{path}
-    /// e.g bucket1/folder/simple.jpeg
-    /// specify content_type for destination file
-    async fn copy_blob(&self,
-                       blob_path: String, 
-                       blob_destination_path: String,
-                       content_type: Option<String>) -> BlobResult<P>;
-    /// Write to a blob in bucket
-    async fn write_blob(&self, blob_name: String, content: Option<Bytes>) -> BlobResult<P>;
-    /// Delete a blob from bucket
-    async fn delete_blob(&self, blob_path: String) -> BlobResult<bool>;
+//    /// List all blobs
+//    /// Returns Ok((Vec<P>, Option<String>)) where Option<String> is the
+//    /// next marker to use in listing blobs
+//    async fn list_blobs(&self, marker: Option<String>) -> BucketResult<(Vec<P>, Option<String>)>;
+//    /// Retrieve a blob from this bucket
+//    /// Specify blob_path e.g "pictures/image1.png"
+//    /// content_range is range to retrieve at once, if None, retrieve entire object
+//    async fn get_blob(&self, blob_path: String, content_range: Option<String>) -> BlobResult<P>;
+//    /// copy blob_path to another blob path
+//    /// blob_destination_path is formated as {bucket_name}/{path}
+//    /// e.g bucket1/folder/simple.jpeg
+//    /// specify content_type for destination file
+//    async fn copy_blob(&self,
+//                       blob_path: String, 
+//                       blob_destination_path: String,
+//                       content_type: Option<String>) -> BlobResult<P>;
+//    /// Write to a blob in bucket
+//    async fn write_blob(&self, blob_name: String, content: Option<Bytes>) -> BlobResult<P>;
+//    /// Delete a blob from bucket
+//    async fn delete_blob(&self, blob_path: String) -> BlobResult<bool>;
 }
