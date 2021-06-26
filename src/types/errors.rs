@@ -11,7 +11,9 @@ pub enum BucketError {
     /// Bucket listing error
     ListError(String),
     /// Credentials error
-    CredError(String)
+    CredError(String),
+    /// Open error
+    OpenError(String)
 }
 
 /// Blob based errors

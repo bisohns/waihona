@@ -5,6 +5,7 @@
 [![Crates.io](https://img.shields.io/crates/v/waihona.svg)](https://crates.io/crates/waihona)
 [![Documentation](https://docs.rs/waihona/badge.svg)](https://docs.rs/waihona/)
 [![Build Status](https://github.com/bisoncorps/waihona/workflows/Build%20and%20Test/badge.svg)](https://github.com/bisoncorps/waihona/actions)
+[![Publish Status](https://github.com/bisoncorps/waihona/workflows/Publish%20to%20Cargo/badge.svg)](https://github.com/bisoncorps/waihona/actions)
 
 
 Rust library for cloud storage across major cloud providers
@@ -15,9 +16,9 @@ Waihona simply means storage in Hawaiian
  ## Feature Flags
 
  The following feature flags exist for this crate
- - `aws`: Enable aws provider and dependencies
- - `gcp`: Enable gcp provider and dependencies
- - `azure`: Enable azure provider and dependencies
+ - [x] `aws`: Enable aws provider and dependencies
+ - [] `gcp`: Enable gcp provider and dependencies
+ - [] `azure`: Enable azure provider and dependencies
 
 ### Examples
 
@@ -30,7 +31,8 @@ List buckets from project waihona on GCP
 
 ```rust
 // ensure to export service credential using GOOGLE_APPLICATION_CREDENTIALS
-use waihona::providers::gcp::GcpBucket
+#[cfg(feature = "gcp")]
+use waihona::providers::gcp::GcpBucket;
 
 #[tokio::test]
 #[cfg(feature = "gcp")]
@@ -41,6 +43,8 @@ async fn test_list_buckets() -> Vec<GcpBucket> {
    let mut gcp_buckets = providers::gcp::GcpBuckets::new(
        "waihona"
        );
+   // Returns (Vec<GcpBucket, Option<String>)
+   // where Option<String> is the cursor for the token for next page listing
    let resp = gcp_buckets.list().await;
    resp[0]
 }
@@ -56,9 +60,8 @@ Check bucket waihona exists on AWS
 async fn test_bucket_exists() -> bool {
    use waihona::types::bucket::{Buckets};
    use waihona::providers;
-   use rusoto_core::{Region};
    let mut aws_buckets = providers::aws::AwsBuckets::new(
-       Region::UsEast2
+       "us-east-2"
        );
    let resp = aws_buckets.exists(
        String::from("waihona")
@@ -70,7 +73,8 @@ async fn test_bucket_exists() -> bool {
 Write content to a blob "example.txt" in waihona bucket on Azure
 
 ```rust
-use waihona::providers::azure::AzureBlob
+#[cfg(feature = "azure")]
+use waihona::providers::azure::AzureBlob;
 
 
 
@@ -91,6 +95,7 @@ async fn test_create_blob() -> AzureBlob {
         Some(Bytes::from("Hello world"))
        ).await
        .unwrap();
+    blob
  }
  ```
 
@@ -99,7 +104,7 @@ async fn test_create_blob() -> AzureBlob {
  assuming waihona buckets exist on both platforms
 
 ```rust
-use waihona::providers::gcp::GcpBlob
+use waihona::providers::gcp::GcpBlob;
 
 
 #[tokio::test]
@@ -109,22 +114,17 @@ async fn test_transfer_blob() -> GcpBlob {
    use waihona::types::blob::{Blob};
    use waihona::providers;
    use bytes::Bytes;
-   use rusoto_core::{Region};
-   let mut aws_buckets = providers::aws::AwsBuckets::new(
-       Region::UsEast2
-       );
    let mut gcp_buckets = providers::gcp::GcpBuckets::new(
        "gcp-project-name"
        );
-   let aws_waihona = aws_buckets.open(
-       String::from("waihona"),
-       ).await.unwrap();
    let gcp_waihona = gcp_buckets.open(
        String::from("waihona"),
        ).await.unwrap();
-   let mut aws_blob = aws_waihona.get_blob(
-       "example.txt".to_owned(),
-       None
+   let mut aws_blob = providers::aws::AwsBlob::get(
+       "us-east-2", // Region
+       "waihona", // Bucket name
+       "example.txt", // Blob name
+       None // Content range
        ).await
        .unwrap();
    let content: Bytes = aws_blob.read().unwrap();
@@ -138,7 +138,7 @@ async fn test_transfer_blob() -> GcpBlob {
  }
  ```
 
-Current version: 0.1.0
+Current version: 0.0.1
 
 ## License
 

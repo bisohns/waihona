@@ -4,9 +4,8 @@
 async fn test_bucket_exists() {
     use crate::types::bucket::{Buckets};
     use crate::providers;
-    use rusoto_core::{Region};
     let mut aws_buckets = providers::aws::AwsBuckets::new(
-        Region::UsEast2
+        "us-east-2"
         );
     let resp = aws_buckets.exists(
         String::from("waihona")
@@ -19,9 +18,8 @@ async fn test_bucket_exists() {
 async fn test_bucket_open() {
     use crate::types::bucket::{Buckets, Bucket};
     use crate::providers;
-    use rusoto_core::{Region};
     let mut aws_buckets = providers::aws::AwsBuckets::new(
-        Region::UsEast2
+        "us-east-2"
         );
     let waihona = aws_buckets.open(
         String::from("waihona"),
@@ -37,9 +35,8 @@ async fn test_get_blob() {
     use crate::types::blob::{Blob};
     use crate::providers;
     use bytes::Bytes;
-    use rusoto_core::{Region};
     let mut aws_buckets = providers::aws::AwsBuckets::new(
-        Region::UsEast2
+        "us-east-2"
         );
     let waihona = aws_buckets.open(
         String::from("waihona"),

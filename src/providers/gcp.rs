@@ -1,30 +1,18 @@
-use std::env;
-use hyper::body::Body;
 use async_trait::async_trait;
+use futures::{StreamExt, Stream};
 use bytes::Bytes;
 use crate::types::bucket::{Buckets, Bucket};
 use crate::types::blob::{Blob};
 use crate::types::errors::{
     BucketResult, BucketError, BlobResult,BlobError
 };
-use google_cloud::storage::{
-    Bucket as StorageBucket, Client
-};
-use yup_oauth2::{ServiceAccountAuthenticator, InstalledFlowReturnMethod};
-use google_storage1::api::Storage;
 
-//macro_rules! assert_ok {
-//    ($expr:expr) => {
-//        match $expr {
-//            Ok(value) => value,
-//            Err(err) => {
-//                panic!("asserted result is an error: {}", err);
-//            }
-//        }
-//    };
-//}
+use cloud_storage::Client;
+use cloud_storage::bucket::{NewBucket};
+use cloud_storage::ListRequest;
 
-#[derive(Clone)]
+
+#[derive(Debug)]
 pub struct GcpBuckets {
     pub client: Client,
     pub user_project: String,
@@ -34,11 +22,10 @@ pub struct GcpBuckets {
 /// Will make use of the exported credential at 
 /// GOOGLE_APPLICATION_CREDENTIALS
 impl GcpBuckets {
-    pub async fn new(project_name: impl Into<String>) -> GcpBuckets {
-        let name = project_name.into();
+    pub fn new(project_name: impl Into<String>) -> GcpBuckets {
         GcpBuckets{
-            client: Client::new(name.clone()).await.unwrap(),
-            user_project: name
+            client: Client::default(),
+            user_project: project_name.into(),
         }
     }
 
@@ -49,7 +36,7 @@ pub struct GcpBlob {
     key: Option<String>,
     e_tag: Option<String>,
     size: Option<i64>,
-    body: Option<Body>,
+    body: Option<Vec<u8>>,
     content_type: Option<String>,
     content_range: Option<String>,
     bucket: String,
@@ -76,19 +63,23 @@ impl Blob for GcpBlob {
     async fn read(&mut self) -> BlobResult<Bytes> {
         unimplemented!();
     }
+
 }
+
 
 #[async_trait]
 impl Buckets<GcpBucket, GcpBlob> for GcpBuckets {
     async fn list(&mut self) -> Vec<GcpBucket> {
-        let resp = self.client.buckets().await;
+        let resp = self.client.bucket().list().await;
         let mut buckets: Vec<GcpBucket> = Vec::new();
         for bucket in resp.unwrap().iter() {
-            let bucket_found = GcpBucket::new(
-                String::from(bucket.name()),
-                Some(bucket.clone()),
-                self.user_project.clone()
-                );
+            let bucket_found = GcpBucket{
+                name: bucket.name.clone(),
+                client: Client::default(),
+                user_project: self.user_project.clone(),
+                e_tag: bucket.etag.clone(),
+                self_link: bucket.self_link.clone(),
+            };
             buckets.push(bucket_found);
         }
         buckets
@@ -96,32 +87,40 @@ impl Buckets<GcpBucket, GcpBlob> for GcpBuckets {
 
     async fn open(&mut self, bucket_name: String) -> BucketResult<GcpBucket>{
         if self.exists(bucket_name.clone()).await {
-            let bucket = match self.client.bucket(bucket_name.as_str()).await {
-                Ok(b) => b,
-                Err(_) => unreachable!()
-            };
-
-            Ok(
-                GcpBucket::new(
-                    bucket_name.clone(),
-                    Some(bucket),
-                    self.user_project.clone()
-                    )
-              )
+            match self.client.bucket().read(bucket_name.as_str()).await {
+                Ok(b) => {
+                    Ok(GcpBucket{
+                        name: b.name.clone(),
+                        client: Client::default(),
+                        user_project: self.user_project.clone(),
+                        e_tag: b.etag.clone(),
+                        self_link: b.self_link.clone(),
+                    })
+                },
+                Err(_) => Err(BucketError::OpenError(
+                        String::from("Could not open bucket")
+                        ))
+            }
         } else {
             Err(BucketError::NotFound)
         }
     }
 
     async fn create(&mut self, bucket_name: String, _location: Option<String>) -> BucketResult<GcpBucket>{
-        let resp = self.client.create_bucket(bucket_name.as_str()).await;
+        let new_bucket = NewBucket {
+            name: bucket_name.clone(),
+            ..Default::default()
+        };
+        let resp = self.client.bucket().create(&new_bucket).await;
         match resp {
             Ok(a) => {
-                Ok(GcpBucket::new(
-                        bucket_name.clone(),
-                        Some(a),
-                        self.user_project.clone()
-                        ))
+                Ok(GcpBucket{
+                    name: a.name.clone(),
+                    client: Client::default(),
+                    user_project: self.user_project.clone(),
+                    e_tag: a.etag.clone(),
+                    self_link: a.self_link.clone(),
+                })
                     },
             Err(e) => {
                 Err(BucketError::CreationError(
@@ -133,22 +132,25 @@ impl Buckets<GcpBucket, GcpBlob> for GcpBuckets {
     }
 
     async fn delete(&mut self, bucket_name: String) -> BucketResult<bool> {
-        match self.client.bucket(bucket_name.as_str()).await {
-            Ok(b) => {
-                let _ = b.delete().await;
-                Ok(true)
-            },
-            Err(e) => {
-                Err(BucketError::DeletionError(
-                        String::from(format!("{}", e))
-                        ))
+        if self.exists(bucket_name.clone()).await {
+            let bucket = self.client.bucket().read(bucket_name.as_str()).await.unwrap();
+            match self.client.bucket().delete(bucket).await {
+                Ok(_) => {
+                    Ok(true)
+                },
+                Err(e) => {
+                    Err(BucketError::DeletionError(
+                            String::from(format!("{}", e))
+                            ))
+                }
             }
+        } else {
+            Ok(false)
         }
-
     }
     
     async fn exists(&mut self, bucket_name: String) -> bool {
-        match self.client.bucket(bucket_name.as_str()).await {
+        match self.client.bucket().read(bucket_name.as_str()).await {
             Ok(_) => true,
             Err(_) => false
         }
@@ -157,62 +159,46 @@ impl Buckets<GcpBucket, GcpBlob> for GcpBuckets {
 
 }
 
-#[derive(Clone)]
+#[derive(Debug)]
 pub struct GcpBucket {
     pub name: String,
-    pub bucket: Option<StorageBucket>,
+    pub client: Client,
     pub user_project: String,
+    pub e_tag: String,
+    pub self_link: String,
 }
 
 #[async_trait]
 impl Bucket<GcpBlob> for GcpBucket {
 
     async fn list_blobs(&self, marker: Option<String>) -> BucketResult<(Vec<GcpBlob>, Option<String>)>{
-        match GcpBucket::hub().await {
-            Err(e) => {
-                Err(BucketError::ListError(e.to_string()))
-            },
-            Ok(hub) => {
-                let mut ret: Vec<GcpBlob> = Vec::new();
-                let project: &str  = &self.user_project.clone();
-                let bucket: &str = &self.name.clone();
-                let page_token = match marker {
-                    None => String::from(""),
-                    Some(a) => a,
-                };
-                match hub.objects()
-                    .list(bucket)
-                    .user_project(project)
-                    .page_token(&page_token)
-                    .doit().await {
-
-                        Err(e)=>Err(BucketError::ListError(e.to_string())),
-                        Ok(body) => {
-                            let (_, objects) = body;
-                            for item in objects.items.unwrap() {
-                                let size = match item.size {
-                                    None => None,
-                                    Some(a) => Some(
-                                        a.as_str().parse::<i64>().unwrap()
-                                        )
-                                };
-
-                                ret.push(
-                                    GcpBlob{
-                                        key: None,
-                                        e_tag: item.etag,
-                                        size,
-                                        body: None,
-                                        content_type: item.content_type,
-                                        content_range: None,
-                                        bucket: self.name.clone(),
-                                    })
-                            }
-                            Ok((ret, objects.next_page_token))
-
-                        }
-                    }
+        let all_objects = self.client.object().list(
+            self.name.clone().as_str(), 
+            ListRequest {
+                page_token: marker,
+                ..Default::default()
             }
+            ).await;
+        match all_objects {
+            Ok(object_list) => {
+                let mut ret: Vec<GcpBlob> = Vec::new();
+                let obj_stream = object_list.into_future().await;
+                for obj in obj_stream.items {
+                    let ct = obj.content_type.unwrap_or_else("".to_string());
+                    ret.push(
+                        GcpBlob {
+                            key: Some(obj.name.clone()),
+                            e_tag: Some(obj.etag.clone()),
+                            size: Some(obj.size as i64),
+                            body: None,
+                            content_type: Some(ct),
+                            content_range: None,
+                            bucket: self.name.clone()
+                        })
+                }
+                Ok((ret, obj_stream.next_page_token))
+            },
+            Err(e) => BucketError::ListError
         }
     }
 
@@ -235,35 +221,3 @@ impl Bucket<GcpBlob> for GcpBucket {
         unimplemented!();
     }
 }
-
-impl GcpBucket {
-    pub fn new(name: String, bucket: Option<StorageBucket>, user_project: String) -> GcpBucket {
-        GcpBucket {
-            name,
-            bucket,
-            user_project
-        }
-    }
-
-    /// Create a Storage object for making object calls to gcp
-    pub async fn hub() -> BucketResult<Storage> {
-        match env::var("GOOGLE_APPLICATION_CREDENTIALS") {
-            Ok(b) => {
-                let secret = yup_oauth2::read_service_account_key(b)
-                    .await.expect("client secret");
-                let auth = ServiceAccountAuthenticator::builder(
-                    secret,
-                    ).build().await.unwrap();
-                let hub = Storage::new(hyper::Client::builder().build(hyper_rustls::HttpsConnector::with_native_roots()), auth);
-                Ok(hub)
-            },
-            Err(e) => Err(
-                BucketError::CredError(
-                    String::from("GOOGLE_APPLICATION_CREDENTIALS not found")
-                    )
-                )
-        }
-    }
-
-}
-

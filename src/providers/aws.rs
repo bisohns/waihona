@@ -26,6 +26,37 @@ pub struct AwsBucket{
     s3: S3Client,
 }
 
+pub fn string_to_region(reg: &str) -> BucketResult<Region> {
+    match reg {
+        "ap-east-1" => Ok(Region::ApEast1),
+        "ap-northeast-1" => Ok(Region::ApNortheast1),
+        "ap-northeast-2" => Ok(Region::ApNortheast2),
+        "ap-northeast-3" => Ok(Region::ApNortheast3),
+        "ap-south-1" => Ok(Region::ApSouth1),
+        "ap-southeast-1" => Ok(Region::ApSoutheast1),
+        "ap-southeast-2" => Ok(Region::ApSoutheast2),
+        "ca-central-1" => Ok(Region::CaCentral1),
+        "eu-central-1" => Ok(Region::EuCentral1),
+        "eu-west-1" => Ok(Region::EuWest1),
+        "eu-west-2" => Ok(Region::EuWest2),
+        "eu-west-3" => Ok(Region::EuWest3),
+        "eu-north-1" => Ok(Region::EuNorth1),
+        "eu-south-1" => Ok(Region::EuSouth1),
+        "me-south-1" => Ok(Region::MeSouth1),
+        "sa-east-1" => Ok(Region::SaEast1),
+        "us-east-1" => Ok(Region::UsEast1),
+        "us-east-2" => Ok(Region::UsEast2),
+        "us-west-1" => Ok(Region::UsWest1),
+        "us-west-2" => Ok(Region::UsWest2),
+        "us-goveast-1" => Ok(Region::UsGovEast1),
+        "us-govwest-1" => Ok(Region::UsGovWest1),
+        "cn-north-1" => Ok(Region::CnNorth1),
+        "cn-northwest-1" => Ok(Region::CnNorthwest1),
+        "af-south-1" => Ok(Region::AfSouth1),
+        _ => Err(BucketError::NotFound)
+    }
+}
+
 impl AwsBucket {
     pub fn new(name: String, s3: Option<S3Client>) -> Self {
         match s3 {
@@ -69,6 +100,21 @@ impl AwsBlob {
             bucket
         }
 
+    }
+
+    pub async fn get(region: &str, bucket: &str, blob_path: &str, content_range: Option<String>) -> BlobResult<Self> {
+        let mut aws_buckets = AwsBuckets::new(region);
+        let bucket_str = String::from(bucket);
+        let bucket = aws_buckets.open(bucket_str).await;
+        match bucket {
+            Ok(b) => {
+                b.get_blob(
+                    String::from(blob_path),
+                    content_range
+                    ).await
+            },
+            Err(e) => Err(BlobError::GetError(e.to_string()))
+        }
     }
 }
 
@@ -142,9 +188,10 @@ impl Blob for AwsBlob {
 
 
 impl AwsBuckets {
-    pub fn new(region: Region) -> Self {
+    pub fn new(region: &str) -> Self {
+        let reg = string_to_region(region).unwrap();
         AwsBuckets {
-            s3: S3Client::new(region)
+            s3: S3Client::new(reg)
         }
 
     }

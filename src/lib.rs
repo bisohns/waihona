@@ -6,9 +6,9 @@
 //!  ## Feature Flags
 //!  
 //!  The following feature flags exist for this crate
-//!  - `aws`: Enable aws provider and dependencies
-//!  - `gcp`: Enable gcp provider and dependencies
-//!  - `azure`: Enable azure provider and dependencies
+//!  - [x] `aws`: Enable aws provider and dependencies
+//!  - [] `gcp`: Enable gcp provider and dependencies
+//!  - [] `azure`: Enable azure provider and dependencies
 //!
 //! ## Examples
 //!
@@ -21,7 +21,8 @@
 //!
 //! ```no_run
 //! // ensure to export service credential using GOOGLE_APPLICATION_CREDENTIALS
-//! use waihona::providers::gcp::GcpBucket
+//!#[cfg(feature = "gcp")]
+//! use waihona::providers::gcp::GcpBucket;
 //!
 //!#[tokio::test]
 //!#[cfg(feature = "gcp")]
@@ -32,6 +33,8 @@
 //!    let mut gcp_buckets = providers::gcp::GcpBuckets::new(
 //!        "waihona"
 //!        );
+//!    // Returns (Vec<GcpBucket, Option<String>)
+//!    // where Option<String> is the cursor for the token for next page listing
 //!    let resp = gcp_buckets.list().await;
 //!    resp[0]
 //!}
@@ -47,9 +50,8 @@
 //!async fn test_bucket_exists() -> bool {
 //!    use waihona::types::bucket::{Buckets};
 //!    use waihona::providers;
-//!    use rusoto_core::{Region};
 //!    let mut aws_buckets = providers::aws::AwsBuckets::new(
-//!        Region::UsEast2
+//!        "us-east-2"
 //!        );
 //!    let resp = aws_buckets.exists(
 //!        String::from("waihona")
@@ -61,7 +63,8 @@
 //! Write content to a blob "example.txt" in waihona bucket on Azure
 //!
 //! ```no_run
-//! use waihona::providers::azure::AzureBlob
+//!#[cfg(feature = "azure")]
+//! use waihona::providers::azure::AzureBlob;
 //!
 //!
 //!
@@ -82,6 +85,7 @@
 //!         Some(Bytes::from("Hello world"))
 //!        ).await
 //!        .unwrap();
+//!     blob
 //!  }
 //!  ```
 //!
@@ -90,7 +94,7 @@
 //!  assuming waihona buckets exist on both platforms
 //!
 //! ```rust
-//! use waihona::providers::gcp::GcpBlob
+//! use waihona::providers::gcp::GcpBlob;
 //!
 //!
 //!#[tokio::test]
@@ -100,22 +104,17 @@
 //!    use waihona::types::blob::{Blob};
 //!    use waihona::providers;
 //!    use bytes::Bytes;
-//!    use rusoto_core::{Region};
-//!    let mut aws_buckets = providers::aws::AwsBuckets::new(
-//!        Region::UsEast2
-//!        );
 //!    let mut gcp_buckets = providers::gcp::GcpBuckets::new(
 //!        "gcp-project-name"
 //!        );
-//!    let aws_waihona = aws_buckets.open(
-//!        String::from("waihona"),
-//!        ).await.unwrap();
 //!    let gcp_waihona = gcp_buckets.open(
 //!        String::from("waihona"),
 //!        ).await.unwrap();
-//!    let mut aws_blob = aws_waihona.get_blob(
-//!        "example.txt".to_owned(),
-//!        None
+//!    let mut aws_blob = providers::aws::AwsBlob::get(
+//!        "us-east-2", // Region
+//!        "waihona", // Bucket name
+//!        "example.txt", // Blob name
+//!        None // Content range
 //!        ).await
 //!        .unwrap();
 //!    let content: Bytes = aws_blob.read().unwrap();

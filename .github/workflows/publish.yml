@@ -1,0 +1,27 @@
+name: Publish to Cargo
+
+on:
+  push:
+    tags: 
+      - 'v*'
+env:
+  AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
+  AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+  GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{secrets.GCP_CREDENTIALS}}
+
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Test crates
+        run: cargo test --features aws,gcp,azure -- --nocapture
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - uses: katyo/publish-crates@v1
+        with:
+          dry-run: true
