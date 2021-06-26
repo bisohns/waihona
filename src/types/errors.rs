@@ -10,6 +10,8 @@ pub enum BucketError {
     DeletionError(String),
     /// Bucket listing error
     ListError(String),
+    /// Credentials error
+    CredError(String)
 }
 
 /// Blob based errors
