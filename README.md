@@ -8,6 +8,15 @@
 [![Publish Status](https://github.com/bisoncorps/waihona/workflows/Publish%20to%20Cargo/badge.svg)](https://github.com/bisoncorps/waihona/actions)
 
 
+## Usage
+
+Add the following line to your Cargo.toml
+
+```rust
+[dependencies]
+waihona = "0.0.1"
+```
+
 Rust library for cloud storage across major cloud providers
 It aims to provide simple to use functions to perform CRUD operations on
 buckets and blobs.
@@ -103,7 +112,8 @@ async fn test_create_blob() -> AzureBlob {
  and delete AWS blob afterwards
  assuming waihona buckets exist on both platforms
 
-```rust
+```no_run
+#[cfg(feature = "gcp")]
 use waihona::providers::gcp::GcpBlob;
 
 
@@ -137,8 +147,6 @@ async fn test_transfer_blob() -> GcpBlob {
     gcp_blob
  }
  ```
-
-Current version: 0.0.1
 
 ## License
 

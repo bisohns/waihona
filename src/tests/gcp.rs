@@ -27,6 +27,25 @@ async fn test_bucket_list_blobs() {
     println!("{:?}", blobs);
 }
 
+#[tokio::test]
+#[cfg(feature = "gcp")]
+async fn test_bucket_get_blob() {
+    use crate::types::bucket::{Buckets, Bucket};
+    use crate::providers;
+    let mut gcp_buckets = providers::gcp::GcpBuckets::new(
+        "psyched-myth-306812"
+        );
+    let resp =  gcp_buckets.open(
+        "mythra".to_owned()
+        ).await;
+    let mythra = resp.unwrap();
+    let blob = mythra.get_blob(
+        "Screenshot from 2021-03-24 20-47-02.png".to_owned(),
+        None
+        ).await;
+    println!("{:?}", blob);
+}
+
 //#[tokio::test]
 //#[cfg(feature = "gcp")]
 //async fn test_bucket_creation() {

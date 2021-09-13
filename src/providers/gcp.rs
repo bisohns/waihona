@@ -10,6 +10,8 @@ use crate::types::errors::{
 use cloud_storage::Client;
 use cloud_storage::bucket::{NewBucket};
 use cloud_storage::ListRequest;
+use cloud_storage::object::ObjectList;
+use cloud_storage::Result as CResult;
 
 
 #[derive(Debug)]
@@ -173,7 +175,7 @@ impl Bucket<GcpBlob> for GcpBucket {
 
     async fn list_blobs(&self, marker: Option<String>) -> BucketResult<(Vec<GcpBlob>, Option<String>)>{
         let all_objects = self.client.object().list(
-            self.name.clone().as_str(), 
+            self.name.as_str(), 
             ListRequest {
                 page_token: marker,
                 ..Default::default()
@@ -182,28 +184,49 @@ impl Bucket<GcpBlob> for GcpBucket {
         match all_objects {
             Ok(object_list) => {
                 let mut ret: Vec<GcpBlob> = Vec::new();
-                let obj_stream = object_list.into_future().await;
-                for obj in obj_stream.items {
-                    let ct = obj.content_type.unwrap_or_else("".to_string());
+                let obj_stream = object_list.take(1).collect::<Vec<CResult<ObjectList>>>().await;
+                let bckt = obj_stream[0].as_ref().unwrap();
+                for obj in &bckt.items {
+                    let ct = obj.content_type.as_ref().unwrap();
                     ret.push(
                         GcpBlob {
                             key: Some(obj.name.clone()),
                             e_tag: Some(obj.etag.clone()),
                             size: Some(obj.size as i64),
                             body: None,
-                            content_type: Some(ct),
+                            content_type: Some(ct.to_string()),
                             content_range: None,
                             bucket: self.name.clone()
                         })
                 }
-                Ok((ret, obj_stream.next_page_token))
+                Ok((ret, None))
             },
-            Err(e) => BucketError::ListError
+            Err(e) => Err(BucketError::ListError(String::from("could not list")))
         }
-    }
-
-    async fn get_blob(&self, blob_path: String, content_range: Option<String>) -> BlobResult<GcpBlob>{
-        unimplemented!();
+    } async fn get_blob(&self, blob_path: String, content_range: Option<String>) -> BlobResult<GcpBlob>{
+        let resp = self.client.object().read(
+            self.name.as_str(), 
+            blob_path.as_str(),
+            ).await;
+        match resp {
+            Ok(k) => {
+                let blob = GcpBlob{
+                    key: Some(k.name.clone()),
+                    e_tag: Some(k.etag.clone()),
+                    size: Some(k.size as i64),
+                    body: None,
+                    content_type: k.content_type,
+                    content_range: content_range,
+                    bucket: self.name.clone()
+                };
+                Ok(blob)
+            },
+            Err(e) => {
+                Err(BlobError::GetError(
+                    String::from(format!("{}",e))
+                    ))
+            },
+        }
     }
 
     async fn copy_blob(&self,

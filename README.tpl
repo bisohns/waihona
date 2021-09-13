@@ -8,9 +8,16 @@
 [![Publish Status](https://github.com/bisoncorps/waihona/workflows/Publish%20to%20Cargo/badge.svg)](https://github.com/bisoncorps/waihona/actions)
 
 
-{{readme}}
+## Usage
 
-Current version: {{version}}
+Add the following line to your Cargo.toml
+
+```rust
+[dependencies]
+waihona = "{{version}}"
+```
+
+{{readme}}
 
 ## License
 

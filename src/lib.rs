@@ -93,7 +93,8 @@
 //!  and delete AWS blob afterwards
 //!  assuming waihona buckets exist on both platforms
 //!
-//! ```rust
+//! ```no_run
+//!#[cfg(feature = "gcp")]
 //! use waihona::providers::gcp::GcpBlob;
 //!
 //!
