@@ -1,5 +1,6 @@
 use async_trait::async_trait;
-use futures::{StreamExt, Stream};
+use regex::Regex;
+use futures::{StreamExt};
 use bytes::Bytes;
 use crate::types::bucket::{Buckets, Bucket};
 use crate::types::blob::{Blob};
@@ -187,21 +188,20 @@ impl Bucket<GcpBlob> for GcpBucket {
                 let obj_stream = object_list.take(1).collect::<Vec<CResult<ObjectList>>>().await;
                 let bckt = obj_stream[0].as_ref().unwrap();
                 for obj in &bckt.items {
-                    let ct = obj.content_type.as_ref().unwrap();
                     ret.push(
                         GcpBlob {
                             key: Some(obj.name.clone()),
                             e_tag: Some(obj.etag.clone()),
                             size: Some(obj.size as i64),
                             body: None,
-                            content_type: Some(ct.to_string()),
+                            content_type: obj.content_type.clone(),
                             content_range: None,
                             bucket: self.name.clone()
                         })
                 }
                 Ok((ret, None))
             },
-            Err(e) => Err(BucketError::ListError(String::from("could not list")))
+            Err(_) => Err(BucketError::ListError(String::from("could not list")))
         }
     } async fn get_blob(&self, blob_path: String, content_range: Option<String>) -> BlobResult<GcpBlob>{
         let resp = self.client.object().read(
@@ -233,14 +233,98 @@ impl Bucket<GcpBlob> for GcpBucket {
                        blob_path: String, 
                        blob_destination_path: String,
                        content_type: Option<String>) -> BlobResult<GcpBlob>{
-        unimplemented!();
+        let copy_source = format!("{}/{}", self.name.clone(), blob_path.clone());
+        let re = Regex::new(r"(?P<bucket>.*?)/(?P<blob_path>.*)").unwrap();
+        if let Some(captures) = re.captures(&blob_destination_path[..]) {
+            let bucket = captures
+                .name("bucket")
+                .unwrap().as_str().to_owned();
+            let key = captures
+                .name("blob_path")
+                .unwrap().as_str().to_owned();
+            let obj = self.client.object().read(
+                self.name.as_str(), 
+                blob_path.as_str(),
+            ).await.unwrap();
+            let resp = self.client.object().copy(
+                &obj,
+                &bucket,
+                &key
+            ).await;
+            match resp {
+                Ok(_) => Ok(
+                    GcpBlob{
+                        key: Some(key.to_string()),
+                        e_tag: Some(obj.etag.clone()),
+                        size: Some(obj.size as i64),
+                        body: None,
+                        content_type,
+                        content_range: None,
+                        bucket: bucket.to_string(),
+                    }
+                    ),
+                Err(e) => {
+                    Err(BlobError::CopyError(
+                            String::from(format!("{}",e))
+                            ))
+                },
+            }
+        } else {
+            return Err(BlobError::CopyError(
+                    String::from(r"Format blob_destination_path as {bucket}/{blob_path}")))
+        }
     }
     
     async fn write_blob(&self, blob_name: String, content: Option<Bytes>) -> BlobResult<GcpBlob>{
-        unimplemented!();
+        use bytes::Buf;
+        use std::io;
+
+        let mut file: Vec<u8> = Vec::new();
+        match content {
+            Some(x) => {
+                let mut reader = x.reader();
+                io::copy(&mut reader, &mut file);
+            },
+            None => ()
+        }
+        let resp = self.client.object().create(
+            self.name.as_str(),
+            file,
+            blob_name.as_str(),
+            ""
+            ).await;
+        match resp {
+            Ok(obj) => Ok(
+                GcpBlob{
+                    key: Some(obj.name.to_string()),
+                    e_tag: Some(obj.etag.clone()),
+                    size: Some(obj.size as i64),
+                    body: None,
+                    content_type: obj.content_type,
+                    content_range: None,
+                    bucket: self.name.clone(),
+                }
+                ),
+            Err(e) => {
+                Err(BlobError::WriteError(
+                        String::from(format!("{}",e))
+                        ))
+            },
+        }
     }
 
     async fn delete_blob(&self, blob_path: String) -> BlobResult<bool>{
-        unimplemented!();
+        let resp = self.client.object().delete(
+            self.name.as_str(),
+            blob_path.as_str(),
+            ).await;
+        match resp {
+            Ok(_) => Ok(true),
+            Err(e) => {
+                Err(BlobError::DeletionError(
+                        String::from(format!("{}",e))
+                        ))
+            },
+        }
     }
 }

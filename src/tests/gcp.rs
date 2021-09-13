@@ -44,6 +44,22 @@ async fn test_bucket_get_blob() {
         None
         ).await;
     println!("{:?}", blob);
+    let copied = mythra.copy_blob(
+        "Screenshot from 2021-03-24 20-47-02.png".to_owned(),
+        "mythra/copied.png".to_owned(),
+        None
+        ).await;
+    println!("{:?}", copied);
+    let del = mythra.delete_blob(
+        "copied.png".to_owned()
+        ).await.unwrap();
+    println!("{:?}", del);
+    use bytes::Bytes;
+    let new = mythra.write_blob(
+        "new.json".to_owned(),
+        Some(Bytes::from(r"{'example': 1}"))
+        ).await;
+    println!("{:?}", new);
 }
 
 //#[tokio::test]
