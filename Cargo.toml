@@ -4,12 +4,20 @@ version = "0.0.1"
 authors = ["Diretnan Domnan <diretnandomnan@gmail.com>", "Wisdom Praise <wisdompraise968@gmail.com"]
 edition = "2018"
 categories = ["web-programming", "asynchronous", "api-bindings"]
-keywords = ["web-programming", "cloud", "cloud storage", "containers", "aws", "gcp", "azure", "blob", "bucket"]
+keywords = ["azure", "aws", "gcp", "blob", "bucket"]
 license-file = "LICENSE"
+homepage = "https://github.com/bisoncorps/waihona"
 repository = "https://github.com/bisoncorps/waihona"
-documentation = "https://docs.rs/waihona"
+description = "Library for rudimentary cloud storage capabilities across major cloud providers" 
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+exclude = [
+    "src/tests/*.rs",
+    "*.tpl",
+    ".github/",
+    "assets/",
+    ".gitignore",
+]
 
 [badges]
 maintenance = { status = "actively-developed" }

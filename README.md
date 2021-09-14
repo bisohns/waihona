@@ -1,6 +1,6 @@
 # waihona
 <!-- markdownlint-disable-next-line -->
-<p align="center"><img src="assets/waihona.png" alt="mythra" height="100px"></p>
+<p align="center"><img src="https://github.com/bisoncorps/waihona/blob/main/assets/waihona.png" alt="mythra" height="100px"></p>
 
 [![Crates.io](https://img.shields.io/crates/v/waihona.svg)](https://crates.io/crates/waihona)
 [![Build Status](https://github.com/bisoncorps/waihona/workflows/Build%20and%20Test/badge.svg)](https://github.com/bisoncorps/waihona/actions)
