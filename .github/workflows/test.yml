@@ -20,4 +20,4 @@ jobs:
       - name: Build
         run: cargo build --verbose
       - name: Run tests
-        run: cargo test --features gcp, aws -- --nocapture
+        run: cargo test --features gcp,aws -- --nocapture

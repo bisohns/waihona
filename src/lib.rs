@@ -7,7 +7,7 @@
 //!  
 //!  The following feature flags exist for this crate
 //!  - [x] `aws`: Enable aws provider and dependencies
-//!  - [] `gcp`: Enable gcp provider and dependencies
+//!  - [x] `gcp`: Enable gcp provider and dependencies
 //!  - [] `azure`: Enable azure provider and dependencies
 //!
 //! ## Examples
