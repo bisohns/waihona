@@ -10,7 +10,7 @@ pub trait Blob {
     async fn delete(&self) -> BlobResult<bool>;
     /// copy blob
     async fn copy(&self,
-                  blob_destination_path: String,
+                  blob_destination_path: &str,
                   content_type: Option<String>
                   ) -> BlobResult<bool>;
     /// Write to blob

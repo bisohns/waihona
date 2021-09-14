@@ -9,8 +9,6 @@ use crate::types::errors::{
     BucketResult, BucketError, BlobResult,BlobError
 };
 use rusoto_core::{Region};
-use rusoto_core::credential::{AwsCredentials};
-//use std::string::ToString;
 use rusoto_s3::{
     S3, S3Client, CreateBucketRequest, CreateBucketConfiguration,
     DeleteBucketRequest, ListObjectsRequest, GetObjectRequest, StreamingBody,
@@ -105,11 +103,11 @@ impl AwsBlob {
     pub async fn get(region: &str, bucket: &str, blob_path: &str, content_range: Option<String>) -> BlobResult<Self> {
         let mut aws_buckets = AwsBuckets::new(region);
         let bucket_str = String::from(bucket);
-        let bucket = aws_buckets.open(bucket_str).await;
+        let bucket = aws_buckets.open(&bucket_str).await;
         match bucket {
             Ok(b) => {
                 b.get_blob(
-                    String::from(blob_path),
+                    blob_path,
                     content_range
                     ).await
             },
@@ -122,7 +120,7 @@ impl AwsBlob {
 impl Blob for AwsBlob {
     async fn delete(&self) -> BlobResult<bool> {
         let bucket = AwsBucket::new(self.bucket.clone(), None);
-        let resp = bucket.delete_blob(self.key.as_ref().unwrap().clone()).await;
+        let resp = bucket.delete_blob(self.key.as_ref().unwrap()).await;
         match resp {
             Ok(_) => Ok(true),
             Err(e) => {
@@ -135,11 +133,11 @@ impl Blob for AwsBlob {
     }
 
     async fn copy(&self,
-                    blob_destination_path: String,
+                    blob_destination_path: &str,
                     content_type: Option<String>) -> BlobResult<bool> {
         let bucket = AwsBucket::new(self.bucket.clone(), None);
         let resp = bucket.copy_blob(
-            self.key.as_ref().unwrap().clone(),
+            self.key.as_ref().unwrap(),
             blob_destination_path,
             content_type).await;
         match resp {
@@ -157,7 +155,7 @@ impl Blob for AwsBlob {
                     content: Option<Bytes>) -> BlobResult<bool> {
         let bucket = AwsBucket::new(self.bucket.clone(), None);
         let resp = bucket.write_blob(
-            self.key.as_ref().unwrap().clone(),
+            self.key.as_ref().unwrap(),
             content).await;
         match resp {
             Ok(_) => Ok(true),
@@ -196,6 +194,13 @@ impl AwsBuckets {
 
     }
 
+}
+
+impl AwsBucket {
+    pub async fn exists(location: &str, bucket: &str) -> bool {
+        let mut buckets = AwsBuckets::new(location);
+        buckets.exists(bucket).await
+    }
 }
 
 #[async_trait]
@@ -237,12 +242,12 @@ impl Bucket<AwsBlob> for AwsBucket {
     }
 
     async fn copy_blob(&self, 
-                       blob_path: String, 
-                       blob_destination_path: String,
+                       blob_path: &str, 
+                       blob_destination_path: &str,
                        content_type: Option<String>) -> BlobResult<AwsBlob> {
-        let copy_source = format!("{}/{}", self.name.clone(), blob_path.clone());
+        let copy_source = format!("{}/{}", self.name.clone(), blob_path);
         let re = Regex::new(r"(?P<bucket>.*?)/(?P<blob_path>.*)").unwrap();
-        if let Some(captures) = re.captures(&blob_destination_path[..]) {
+        if let Some(captures) = re.captures(blob_destination_path) {
             let bucket = captures
                 .name("bucket")
                 .unwrap().as_str().to_owned();
@@ -280,11 +285,11 @@ impl Bucket<AwsBlob> for AwsBucket {
         }
     }
 
-    async fn write_blob(&self, blob_path: String, content: Option<Bytes>) -> BlobResult<AwsBlob>
+    async fn write_blob(&self, blob_path: &str, content: Option<Bytes>) -> BlobResult<AwsBlob>
     {
         let put_blob_req = PutObjectRequest {
             bucket: self.name.to_owned(),
-            key: blob_path.clone(),
+            key: blob_path.to_string(),
             body: Some(content.unwrap().to_vec().into()),
             ..Default::default()
         };
@@ -292,7 +297,7 @@ impl Bucket<AwsBlob> for AwsBucket {
         match resp {
             Ok(k) => Ok(
                 AwsBlob::new(
-                    Some(blob_path),
+                    Some(blob_path.to_string()),
                     k.e_tag,
                     None,
                     None,
@@ -309,10 +314,10 @@ impl Bucket<AwsBlob> for AwsBucket {
         }
     }
 
-    async fn delete_blob(&self, blob_path: String) -> BlobResult<bool> {
+    async fn delete_blob(&self, blob_path: &str) -> BlobResult<bool> {
         let delete_blob_req = DeleteObjectRequest{
             bucket: self.name.clone(),
-            key: blob_path.clone(),
+            key: blob_path.to_string(),
             ..Default::default()
         };
         let resp = self.s3.delete_object(delete_blob_req).await;
@@ -326,10 +331,10 @@ impl Bucket<AwsBlob> for AwsBucket {
         }
     }
 
-    async fn get_blob(&self, blob_path: String, content_range: Option<String>) -> BlobResult<AwsBlob> {
+    async fn get_blob(&self, blob_path: &str, content_range: Option<String>) -> BlobResult<AwsBlob> {
         let get_blob_req = GetObjectRequest{
             bucket: self.name.clone(),
-            key: blob_path.clone(),
+            key: blob_path.to_string(),
             range: content_range,
             ..Default::default()
         };
@@ -337,7 +342,7 @@ impl Bucket<AwsBlob> for AwsBucket {
         match resp {
             Ok(k) => {
                 let blob = AwsBlob::new(
-                    Some(blob_path),
+                    Some(blob_path.to_string()),
                     k.e_tag.clone(),
                     k.content_length.clone(),
                     k.body,
@@ -373,10 +378,10 @@ impl Buckets<AwsBucket, AwsBlob> for AwsBuckets {
         buckets
     }
 
-    async fn open(&mut self, bucket_name: String) -> BucketResult<AwsBucket>{
-        if self.exists(bucket_name.clone()).await {
+    async fn open(&mut self, bucket_name: &str) -> BucketResult<AwsBucket>{
+        if self.exists(&bucket_name).await {
             Ok(AwsBucket{
-                name: bucket_name.clone(),
+                name: bucket_name.to_string(),
                 s3: self.s3.clone(),
             })
         } else {
@@ -384,9 +389,9 @@ impl Buckets<AwsBucket, AwsBlob> for AwsBuckets {
         }
     }
 
-    async fn create(&mut self, bucket_name: String, location: Option<String>) -> BucketResult<AwsBucket>{
+    async fn create(&mut self, bucket_name: &str, location: Option<String>) -> BucketResult<AwsBucket>{
         let create_bucket_req = CreateBucketRequest{
-            bucket: bucket_name.clone(),
+            bucket: bucket_name.to_string(),
             create_bucket_configuration: Some(CreateBucketConfiguration{
                 location_constraint: location
             }),
@@ -395,7 +400,7 @@ impl Buckets<AwsBucket, AwsBlob> for AwsBuckets {
         let resp = self.s3.create_bucket(create_bucket_req).await;
         match resp {
             Ok(_) => Ok(AwsBucket{
-                name: bucket_name.clone(),
+                name: bucket_name.to_string(),
                 s3: self.s3.clone()
             }),
             Err(e) => {
@@ -407,10 +412,10 @@ impl Buckets<AwsBucket, AwsBlob> for AwsBuckets {
 
     }
 
-    async fn delete(&mut self, bucket_name: String) -> BucketResult<bool> {
-        if self.exists(bucket_name.clone()).await {
+    async fn delete(&mut self, bucket_name: &str) -> BucketResult<bool> {
+        if self.exists(bucket_name).await {
             let delete_bucket_req = DeleteBucketRequest{
-                bucket: bucket_name.clone(),
+                bucket: bucket_name.to_string(),
                 ..Default::default()
             };
 
@@ -429,7 +434,7 @@ impl Buckets<AwsBucket, AwsBlob> for AwsBuckets {
 
     }
     
-    async fn exists(&mut self, bucket_name: String) -> bool {
+    async fn exists(&mut self, bucket_name: &str) -> bool {
         let bucket_list = self.list().await;
         for bucket in bucket_list {
             if bucket.name == bucket_name {

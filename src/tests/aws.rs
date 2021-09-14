@@ -4,11 +4,9 @@
 async fn test_bucket_exists() {
     use crate::types::bucket::{Buckets};
     use crate::providers;
-    let mut aws_buckets = providers::aws::AwsBuckets::new(
-        "us-east-2"
-        );
-    let resp = aws_buckets.exists(
-        String::from("waihona")
+    let resp = providers::aws::AwsBucket::exists(
+        "us-east-2",
+        "waihona"
         ).await;
     assert!(resp);
 }
@@ -22,7 +20,7 @@ async fn test_bucket_open() {
         "us-east-2"
         );
     let waihona = aws_buckets.open(
-        String::from("waihona"),
+        "waihona"
         ).await.unwrap();
     let blobs = waihona.list_blobs(None).await;
     println!("{:?}", blobs);
@@ -34,15 +32,14 @@ async fn test_get_blob() {
     use crate::types::bucket::{Buckets, Bucket};
     use crate::types::blob::{Blob};
     use crate::providers;
-    use bytes::Bytes;
     let mut aws_buckets = providers::aws::AwsBuckets::new(
         "us-east-2"
         );
     let waihona = aws_buckets.open(
-        String::from("waihona"),
+        "waihona",
         ).await.unwrap();
     let mut blob = waihona.get_blob(
-        "reka-store.txt".to_owned(),
+        "reka-store.txt",
         None
         ).await
         .unwrap();
@@ -64,7 +61,7 @@ async fn test_get_blob() {
 //        .unwrap();
 //    println!("{:?}", cp_blob);
 //    cp_blob.copy(
-//        "waihona/sec-copy.txt".to_owned(),
+//        "waihona/sec-copy.txt",
 //        None
 //        ).await;
 //    let res = blob.delete().await;

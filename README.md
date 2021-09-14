@@ -72,7 +72,12 @@ async fn test_bucket_exists() -> bool {
        "us-east-2"
        );
    let resp = aws_buckets.exists(
-       String::from("waihona")
+       "waihona"
+       ).await;
+       // OR you can do
+   let resp = providers::aws::AwsBucket::exists(
+       "us-east-2",
+       "waihona"
        ).await;
    resp
 }
@@ -96,10 +101,10 @@ async fn test_create_blob() -> AzureBlob {
    use bytes::Bytes;
    let mut azure_buckets = providers::azure::AzureBuckets::new();
    let waihona = azure_buckets.open(
-       String::from("waihona"),
+       "waihona",
        ).await.unwrap();
    let mut blob = waihona.write_blob(
-       "example.txt".to_owned(),
+       "example.txt",
         Some(Bytes::from("Hello world"))
        ).await
        .unwrap();
@@ -123,12 +128,6 @@ async fn test_transfer_blob() -> GcpBlob {
    use waihona::types::blob::{Blob};
    use waihona::providers;
    use bytes::Bytes;
-   let mut gcp_buckets = providers::gcp::GcpBuckets::new(
-       "gcp-project-name"
-       );
-   let gcp_waihona = gcp_buckets.open(
-       String::from("waihona"),
-       ).await.unwrap();
    let mut aws_blob = providers::aws::AwsBlob::get(
        "us-east-2", // Region
        "waihona", // Bucket name
@@ -136,12 +135,15 @@ async fn test_transfer_blob() -> GcpBlob {
        None // Content range
        ).await
        .unwrap();
-   let content: Bytes = aws_blob.read().unwrap();
-   let gcp_blob = waihona.write_blob(
-       "example.txt".to_owned(),
-        Some(content)
+   let mut gcp_blob = providers::gcp::GcpBlob::get(
+       "gcp-project-name", // Project name
+       "waihona", // Bucket name
+       "example.txt", // Blob name
+       None // Content range
        ).await
        .unwrap();
+   let content: Bytes = aws_blob.read().unwrap();
+   gcp_blob.write(Some(content)).await.unwrap();
     aws_blob.delete().unwrap();
     gcp_blob
  }
