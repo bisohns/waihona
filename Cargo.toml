@@ -12,7 +12,6 @@ description = "Library for rudimentary cloud storage capabilities across major c
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 exclude = [
-    "src/tests/*.rs",
     "*.tpl",
     ".github/",
     "assets/",
