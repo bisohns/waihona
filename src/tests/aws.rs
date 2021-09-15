@@ -2,7 +2,6 @@
 #[tokio::test]
 #[cfg(feature = "aws")]
 async fn test_bucket_exists() {
-    use crate::types::bucket::{Buckets};
     use crate::providers;
     let resp = providers::aws::AwsBucket::exists(
         "us-east-2",

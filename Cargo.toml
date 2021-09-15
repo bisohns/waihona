@@ -15,6 +15,7 @@ exclude = [
     "*.tpl",
     ".github/",
     "assets/",
+    "tests/",
     ".gitignore",
 ]
 
@@ -33,6 +34,7 @@ strum_macros = "0.20.1"
 tokio = "1.4.0"
 
 [features]
+default = [ "aws", "gcp", "azure" ]
 aws = [ "rusoto_core", "rusoto_s3"]
 gcp = [ "cloud-storage" ]
 azure = []

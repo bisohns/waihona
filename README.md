@@ -1,6 +1,6 @@
 # waihona
 <!-- markdownlint-disable-next-line -->
-<p align="center"><img src="https://github.com/bisoncorps/waihona/blob/main/assets/waihona.png" alt="mythra" height="100px"></p>
+<p align="center"><img src="https://github.com/bisoncorps/waihona/raw/main/assets/waihona.png" alt="mythra" height="100px"></p>
 
 [![Crates.io](https://img.shields.io/crates/v/waihona.svg)](https://crates.io/crates/waihona)
 [![Build Status](https://github.com/bisoncorps/waihona/workflows/Build%20and%20Test/badge.svg)](https://github.com/bisoncorps/waihona/actions)
@@ -9,11 +9,11 @@
 
 ## Usage
 
-Add the following line to your Cargo.toml
+All cloud providers are on by default, to specify a single provider e.g aws:
 
 ```rust
 [dependencies]
-waihona = "0.0.1"
+waihona { version = "0.0.1", features = ["aws"], default-features = false }
 ```
 
 Rust library for cloud storage across major cloud providers
@@ -27,6 +27,40 @@ Waihona simply means storage in Hawaiian
  - [x] `aws`: Enable aws provider and dependencies
  - [x] `gcp`: Enable gcp provider and dependencies
  - [ ] `azure`: Enable azure provider and dependencies
+
+ ## Traits
+
+ Three major traits control behaviour for each provider
+
+ Buckets -> Bucket -> Blob
+
+```rust
+ trait Buckets<T, P>
+     where T: Bucket<P>, P: Blob{
+        async fn open(&mut self, bucket_name: &str) -> BucketResult<T>;
+        async fn create(&mut self, bucket_name: &str, location: Option<String>) -> BucketResult<T>;
+        async fn list(&mut self) -> Vec<T>;
+        async fn delete(&mut self, bucket_name: &str) -> BucketResult<bool>;
+        async fn exists(&mut self, bucket_name: &str) -> bool;
+    }
+
+trait Bucket<P>
+    where P: Blob{
+            async fn list_blobs(&self, marker: Option<String>) -> BucketResult<(Vec<P>,Option<String>)>;
+            async fn get_blob(&self, blob_path: &str, content_range: Option<String>) -> BlobResult<P>;
+            async fn copy_blob(&self, blob_path: &str, blob_destination_path: &str, content_type: Option<String>) -> BlobResult<P>;
+            async fn write_blob(&self, blob_name: &str, content: Option<Bytes>) -> BlobResult<P>;
+            async fn delete_blob(&self, blob_path: &str) -> BlobResult<bool>;
+    }
+
+ trait Blob {
+    async fn delete(&self) -> BlobResult<bool>;
+    async fn copy(&self, blob_destination_path: &str, content_type: Option<String> ) -> BlobResult<bool>;
+    async fn write(&self, content: Option<Bytes>) -> BlobResult<bool>;
+    async fn read(&mut self) -> BlobResult<Bytes>;
+    }
+
+```
 
 ### Examples
 
@@ -110,7 +144,7 @@ async fn test_create_blob() -> AzureBlob {
        .unwrap();
     blob
  }
- ```
+```
 
  Copy file content from "example.txt" blob on AWS to blob on GCP
  and delete AWS blob afterwards
@@ -147,7 +181,7 @@ async fn test_transfer_blob() -> GcpBlob {
     aws_blob.delete().unwrap();
     gcp_blob
  }
- ```
+```
 
 ## License
 

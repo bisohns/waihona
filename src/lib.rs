@@ -10,6 +10,40 @@
 //!  - [x] `gcp`: Enable gcp provider and dependencies
 //!  - [ ] `azure`: Enable azure provider and dependencies
 //!
+//!  ## Traits
+//!
+//!  Three major traits control behaviour for each provider 
+//!
+//!  Buckets -> Bucket -> Blob
+//!  
+//!```no_run
+//!  trait Buckets<T, P>     
+//!      where T: Bucket<P>, P: Blob{    
+//!         async fn open(&mut self, bucket_name: &str) -> BucketResult<T>;    
+//!         async fn create(&mut self, bucket_name: &str, location: Option<String>) -> BucketResult<T>;
+//!         async fn list(&mut self) -> Vec<T>;
+//!         async fn delete(&mut self, bucket_name: &str) -> BucketResult<bool>;
+//!         async fn exists(&mut self, bucket_name: &str) -> bool;
+//!     }       
+//!
+//! trait Bucket<P>
+//!     where P: Blob{
+//!             async fn list_blobs(&self, marker: Option<String>) -> BucketResult<(Vec<P>,Option<String>)>;
+//!             async fn get_blob(&self, blob_path: &str, content_range: Option<String>) -> BlobResult<P>;
+//!             async fn copy_blob(&self, blob_path: &str, blob_destination_path: &str, content_type: Option<String>) -> BlobResult<P>;
+//!             async fn write_blob(&self, blob_name: &str, content: Option<Bytes>) -> BlobResult<P>;
+//!             async fn delete_blob(&self, blob_path: &str) -> BlobResult<bool>; 
+//!     }
+//!
+//!  trait Blob {
+//!     async fn delete(&self) -> BlobResult<bool>;
+//!     async fn copy(&self, blob_destination_path: &str, content_type: Option<String> ) -> BlobResult<bool>;
+//!     async fn write(&self, content: Option<Bytes>) -> BlobResult<bool>; 
+//!     async fn read(&mut self) -> BlobResult<Bytes>;
+//!     }
+//! 
+//!```
+//!  
 //! ## Examples
 //!
 //! These quick examples will show you how to make use of the
@@ -92,13 +126,13 @@
 //!        .unwrap();
 //!     blob
 //!  }
-//!  ```
+//!```
 //!
 //!  Copy file content from "example.txt" blob on AWS to blob on GCP
 //!  and delete AWS blob afterwards
 //!  assuming waihona buckets exist on both platforms
 //!
-//! ```rust
+//!```no_run
 //!#[cfg(feature = "gcp")]
 //! use waihona::providers::gcp::GcpBlob;
 //!
@@ -129,9 +163,10 @@
 //!     aws_blob.delete().unwrap();
 //!     gcp_blob
 //!  }
-//!  ```
+//!```
 
 pub mod types;
 pub mod providers;
+#[cfg(test)]
 pub mod tests;
 

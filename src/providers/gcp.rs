@@ -380,7 +380,14 @@ impl Bucket<GcpBlob> for GcpBucket {
         match content {
             Some(x) => {
                 let mut reader = x.reader();
-                io::copy(&mut reader, &mut file);
+                match io::copy(&mut reader, &mut file){
+                    Ok(_) => (),
+                    Err(e) => {
+                        return Err(BlobError::WriteError(
+                                String::from(format!("{}",e))
+                                ))
+                    }
+                }
             },
             None => ()
         }

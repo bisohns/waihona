@@ -18,6 +18,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Build
-        run: cargo build --verbose
+        run: cargo clippy && cargo build --verbose
       - name: Run tests
-        run: cargo test --features gcp,aws -- --nocapture
+        run: cargo test -- --nocapture
