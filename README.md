@@ -13,7 +13,7 @@ All cloud providers are on by default, to specify a single provider e.g aws:
 
 ```rust
 [dependencies]
-waihona { version = "0.0.1", features = ["aws"], default-features = false }
+waihona { version = "0.0.2", features = ["aws"], default-features = false }
 ```
 
 Rust library for cloud storage across major cloud providers

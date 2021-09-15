@@ -1,6 +1,6 @@
 [package]
 name = "waihona"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["Diretnan Domnan <diretnandomnan@gmail.com>", "Wisdom Praise <wisdompraise968@gmail.com"]
 edition = "2018"
 categories = ["web-programming", "asynchronous", "api-bindings"]
