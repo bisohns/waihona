@@ -17,29 +17,32 @@
 //!  Buckets -> Bucket -> Blob
 //!  
 //!```no_run
+//! // all methods of traits are async
+//!  use bytes::Bytes;
+//!
 //!  trait Buckets<T, P>     
 //!      where T: Bucket<P>, P: Blob{    
-//!         async fn open(&mut self, bucket_name: &str) -> BucketResult<T>;    
-//!         async fn create(&mut self, bucket_name: &str, location: Option<String>) -> BucketResult<T>;
-//!         async fn list(&mut self) -> Vec<T>;
-//!         async fn delete(&mut self, bucket_name: &str) -> BucketResult<bool>;
-//!         async fn exists(&mut self, bucket_name: &str) -> bool;
+//!          fn open(&mut self, bucket_name: &str);    
+//!          fn create(&mut self, bucket_name: &str, location: Option<String>);
+//!          fn list(&mut self);
+//!          fn delete(&mut self, bucket_name: &str);
+//!          fn exists(&mut self, bucket_name: &str);
 //!     }       
 //!
 //! trait Bucket<P>
 //!     where P: Blob{
-//!             async fn list_blobs(&self, marker: Option<String>) -> BucketResult<(Vec<P>,Option<String>)>;
-//!             async fn get_blob(&self, blob_path: &str, content_range: Option<String>) -> BlobResult<P>;
-//!             async fn copy_blob(&self, blob_path: &str, blob_destination_path: &str, content_type: Option<String>) -> BlobResult<P>;
-//!             async fn write_blob(&self, blob_name: &str, content: Option<Bytes>) -> BlobResult<P>;
-//!             async fn delete_blob(&self, blob_path: &str) -> BlobResult<bool>; 
+//!         fn list_blobs(&self, marker: Option<String>);
+//!         fn get_blob(&self, blob_path: &str, content_range: Option<String>);
+//!         fn copy_blob(&self, blob_path: &str, blob_destination_path: &str, content_type: Option<String>);
+//!         fn write_blob(&self, blob_name: &str, content: Option<Bytes>);
+//!         fn delete_blob(&self, blob_path: &str); 
 //!     }
 //!
 //!  trait Blob {
-//!     async fn delete(&self) -> BlobResult<bool>;
-//!     async fn copy(&self, blob_destination_path: &str, content_type: Option<String> ) -> BlobResult<bool>;
-//!     async fn write(&self, content: Option<Bytes>) -> BlobResult<bool>; 
-//!     async fn read(&mut self) -> BlobResult<Bytes>;
+//!      fn delete(&self);
+//!      fn copy(&self, blob_destination_path: &str, content_type: Option<String> );
+//!      fn write(&self, content: Option<Bytes>); 
+//!      fn read(&mut self);
 //!     }
 //! 
 //!```
