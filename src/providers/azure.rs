@@ -1,2 +1,2 @@
 #[derive(Debug)]
-pub struct AzureBlob{}
+pub struct AzureBlob {}
