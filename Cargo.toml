@@ -33,12 +33,13 @@ cloud-storage = { version = "0.10", optional = true }
 strum_macros = "0.20.1"
 tokio = "1.4.0"
 # ring = "0.16.20"
-ring = { version = "0.14.5", optional = true }
-azure_sdk_for_rust = { version = "0.12.0", optional = true }
+# ring = { version = "0.14.5", optional = true }
+# azure_sdk_for_rust = { version = "0.12.0", optional = true }
 
 
 [features]
 default = [ "aws", "gcp", "azure" ]
 aws = [ "rusoto_core", "rusoto_s3"]
 gcp = [ "cloud-storage" ]
-azure = ["azure_sdk_for_rust", "ring"]
+# azure = ["azure_sdk_for_rust", "ring"]
+azure = []

@@ -11,7 +11,7 @@
 
 All cloud providers are on by default, to specify a single provider e.g aws:
 
-```rust
+```toml
 [dependencies]
 waihona { version = "{{version}}", features = ["aws"], default-features = false }
 ```
