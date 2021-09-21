@@ -1,22 +1,30 @@
 [package]
 name = "waihona"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["Diretnan Domnan <diretnandomnan@gmail.com>", "Wisdom Praise <wisdompraise968@gmail.com"]
 edition = "2018"
 categories = ["web-programming", "asynchronous", "api-bindings"]
-keywords = ["web-programming", "cloud", "cloud storage", "containers", "aws", "gcp", "azure", "blob", "bucket"]
+keywords = ["azure", "aws", "gcp", "blob", "bucket"]
 license-file = "LICENSE"
+homepage = "https://github.com/bisoncorps/waihona"
 repository = "https://github.com/bisoncorps/waihona"
-documentation = "https://docs.rs/waihona"
+description = "Library for rudimentary cloud storage capabilities across major cloud providers" 
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+exclude = [
+    "*.tpl",
+    ".github/",
+    "assets/",
+    "tests/",
+    ".gitignore",
+]
 
 [badges]
 maintenance = { status = "actively-developed" }
 
 [dependencies]
 async-trait = "0.1.48"
-bytes = "1.0"
+bytes = "1.1.0"
 futures = "0.3.4"
 regex = "1.4.5"
 rusoto_core = { version = "0.46.0", optional = true }
@@ -30,6 +38,7 @@ azure_sdk_for_rust = { version = "0.12.0", optional = true }
 
 
 [features]
+default = [ "aws", "gcp", "azure" ]
 aws = [ "rusoto_core", "rusoto_s3"]
 gcp = [ "cloud-storage" ]
 azure = ["azure_sdk_for_rust", "ring"]
