@@ -32,8 +32,8 @@ rusoto_s3 = { version = "0.46.0", optional = true }
 cloud-storage = { version = "0.10", optional = true }
 strum_macros = "0.20.1"
 tokio = "1.4.0"
-azure_storage = { git = "https://github.com/Azure/azure-sdk-for-rust", features = ["blob"], optional = true }
-azure_core = { git = "https://github.com/Azure/azure-sdk-for-rust", optional = true }
+azure_storage = { version = "0.1.0", git = "https://github.com/Azure/azure-sdk-for-rust", features = ["blob"], optional = true }
+azure_core = { version = "0.1.0", git = "https://github.com/Azure/azure-sdk-for-rust", optional = true }
 
 
 [features]
