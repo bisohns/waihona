@@ -26,7 +26,7 @@ Waihona simply means storage in Hawaiian
  The following feature flags exist for this crate
  - [x] `aws`: Enable aws provider and dependencies
  - [x] `gcp`: Enable gcp provider and dependencies
- - [ ] `azure`: Enable azure provider and dependencies
+ - [x] `azure`: Enable azure provider and dependencies
 
  ## Traits
 
@@ -131,12 +131,11 @@ use waihona::providers::azure::AzureBlob;
 #[tokio::test]
 #[cfg(feature = "azure")]
 async fn test_create_blob() -> AzureBlob {
-   // !! UNIMPLEMENTED
    use waihona::types::bucket::{Buckets, Bucket};
    use waihona::types::blob::{Blob};
    use waihona::providers;
    use bytes::Bytes;
-   let mut azure_buckets = providers::azure::AzureBuckets::new();
+   let mut azure_buckets = providers::azure::AzureBuckets::new("waihona".to_owned());
    let waihona = azure_buckets.open(
        "waihona",
        ).await.unwrap();
@@ -145,7 +144,8 @@ async fn test_create_blob() -> AzureBlob {
         Some(Bytes::from("Hello world"))
        ).await
        .unwrap();
-    blob
+    let read = blob.read().await.unwrap();
+    assert!(read.eq(&Bytes::from("Hello world")));
  }
 ```
 
