@@ -35,11 +35,12 @@ tokio = "1.4.0"
 # ring = "0.16.20"
 # ring = { version = "0.14.5", optional = true }
 # azure_sdk_for_rust = { version = "0.12.0", optional = true }
+azure_storage = { git = "https://github.com/Azure/azure-sdk-for-rust", features = ["blob"], optional = true }
+azure_core = { git = "https://github.com/Azure/azure-sdk-for-rust", optional = true }
 
 
 [features]
 default = [ "aws", "gcp", "azure" ]
 aws = [ "rusoto_core", "rusoto_s3"]
 gcp = [ "cloud-storage" ]
-# azure = ["azure_sdk_for_rust", "ring"]
-azure = []
+azure = ["azure_storage", "azure_core"]

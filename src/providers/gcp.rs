@@ -4,7 +4,6 @@ use crate::types::errors::{BlobError, BlobResult, BucketError, BucketResult};
 use async_trait::async_trait;
 use bytes::Bytes;
 use futures::StreamExt;
-use futures::{Stream, StreamExt};
 use regex::Regex;
 
 use cloud_storage::bucket::NewBucket;
