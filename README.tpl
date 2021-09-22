@@ -13,7 +13,7 @@ All cloud providers are on by default, to specify a single provider e.g aws:
 
 ```toml
 [dependencies]
-waihona { version = "{{version}}", features = ["aws"], default-features = false }
+waihona={version = "{{version}}", features = ["aws"], default-features = false }
 ```
 
 {{readme}}

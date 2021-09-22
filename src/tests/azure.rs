@@ -69,3 +69,29 @@ async fn test_container_read_blob() {
     let read = new.read().await.unwrap();
     assert!(read.eq(&Bytes::from(r"{'example': 1}")));
 }
+
+#[tokio::test]
+#[cfg(all(feature = "gcp", feature = "azure"))]
+async fn test_copy_blob_from_azure_to_gcp() {
+    use crate::providers;
+    use crate::types::blob::Blob;
+    use crate::types::bucket::{Bucket, Buckets};
+    use bytes::Bytes;
+    let mut azure_blob = providers::azure::AzureBlob::get(
+        "waihona",       // Region
+        "waihona",       // Container name
+        "CV latest.pdf", // Blob name
+        None,            // Content range
+    )
+    .await
+    .unwrap();
+    let mut gcp_buckets =
+        providers::gcp::GcpBuckets::new("psyched-myth-306812");
+    let resp = gcp_buckets.open("mythra").await;
+    let mythra = resp.unwrap();
+    let content: Option<Bytes> = Some(azure_blob.read().await.unwrap());
+    let mut new = mythra.write_blob("Sent File.pdf", content).await.unwrap();
+    let read = new.read().await.unwrap();
+    let original_content = azure_blob.read().await.unwrap();
+    assert!(read.eq(&Bytes::from(original_content)));
+}
