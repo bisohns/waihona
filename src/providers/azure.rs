@@ -7,6 +7,7 @@ use azure_storage::blob::prelude::*;
 use azure_storage::core::prelude::*;
 use bytes::Bytes;
 use futures::stream::StreamExt;
+use regex::Regex;
 use std::time::Duration;
 
 #[derive(Debug)]
@@ -107,7 +108,9 @@ impl Blob for AzureBlob {
         let del = bucket.delete_blob(&self.key).await;
         match del {
             Ok(_) => Ok(true),
-            Err(e) => Err(BlobError::CopyError(String::from(format!("{}", e)))),
+            Err(e) => {
+                Err(BlobError::DeletionError(String::from(format!("{}", e))))
+            }
         }
     }
 }
@@ -154,26 +157,47 @@ impl Bucket<AzureBlob> for AzureBucket {
         blob_destination_path: &str,
         content_type: Option<String>,
     ) -> BlobResult<AzureBlob> {
-        let buckets = AzureBuckets::new(self.storage_account.to_owned());
-        let source_url = format!(
-            "{}{}/{}",
-            buckets.account_client.blob_storage_url().as_str(),
-            self.name,
-            blob_path
-        );
-        let blob = self.client.as_blob_client(blob_destination_path);
-
-        let response = blob
-            .copy_from_url(&source_url)
-            .is_synchronous(true)
-            .execute()
-            .await;
-        match response {
-            Ok(_) => {
-                let blob = self.get_blob(blob_destination_path, None).await;
-                Ok(blob.unwrap())
+        let re = Regex::new(r"(?P<bucket>.*?)/(?P<blob_path>.*)").unwrap();
+        if let Some(captures) = re.captures(blob_destination_path) {
+            let bucket = captures.name("bucket").unwrap().as_str().to_owned();
+            let key = captures.name("blob_path").unwrap().as_str().to_owned();
+            let absolute_path;
+            if bucket == self.name {
+                absolute_path = key;
+            } else {
+                absolute_path = format!("{}/{}", bucket, key).to_owned();
             }
-            Err(e) => Err(BlobError::GetError(String::from(format!("{}", e)))),
+            let buckets = AzureBuckets::new(self.storage_account.to_owned());
+            let source_url = format!(
+                "{}{}/{}",
+                buckets.account_client.blob_storage_url().as_str(),
+                self.name,
+                blob_path
+            );
+            let blob = self.client.as_blob_client(&absolute_path);
+
+            let response = blob
+                .copy_from_url(&source_url)
+                .is_synchronous(true)
+                .execute()
+                .await;
+            match response {
+                Ok(_) => {
+                    let blob =
+                        self.get_blob(absolute_path.as_str(), None).await;
+                    match blob {
+                        Ok(blob) => Ok(blob),
+                        Err(_) => Err(BlobError::NotFound),
+                    }
+                }
+                Err(e) => {
+                    Err(BlobError::GetError(String::from(format!("{}", e))))
+                }
+            }
+        } else {
+            return Err(BlobError::CopyError(String::from(
+                r"Format blob_destination_path as {bucket}/{blob_path}",
+            )));
         }
     }
 
@@ -267,7 +291,10 @@ impl Bucket<AzureBlob> for AzureBucket {
         match resp {
             Ok(_) => {
                 let blob = self.get_blob(blob_name, None).await;
-                Ok(blob.unwrap())
+                match blob {
+                    Ok(blob) => Ok(blob),
+                    Err(_) => Err(BlobError::NotFound),
+                }
             }
             Err(e) => {
                 Err(BlobError::WriteError(String::from(format!("{}", e))))
@@ -288,18 +315,14 @@ impl AzureBuckets {
         let key = std::env::var("AZURE_SECRET_ACCESS_KEY")
             .expect("Set env variable AZURE_SECRET_ACCESS_KEY");
         let http_client = new_http_client();
+        let storage_account_client = StorageAccountClient::new_access_key(
+            http_client.clone(),
+            &storage_account,
+            &key,
+        );
         AzureBuckets {
-            client: StorageAccountClient::new_access_key(
-                http_client.clone(),
-                &storage_account,
-                &key,
-            )
-            .as_storage_client(),
-            account_client: StorageAccountClient::new_access_key(
-                http_client.clone(),
-                &storage_account,
-                &key,
-            ),
+            client: storage_account_client.as_storage_client(),
+            account_client: storage_account_client,
             storage_account: storage_account,
         }
     }
