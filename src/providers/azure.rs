@@ -315,18 +315,14 @@ impl AzureBuckets {
         let key = std::env::var("AZURE_SECRET_ACCESS_KEY")
             .expect("Set env variable AZURE_SECRET_ACCESS_KEY");
         let http_client = new_http_client();
+        let storage_account_client = StorageAccountClient::new_access_key(
+            http_client.clone(),
+            &storage_account,
+            &key,
+        );
         AzureBuckets {
-            client: StorageAccountClient::new_access_key(
-                http_client.clone(),
-                &storage_account,
-                &key,
-            )
-            .as_storage_client(),
-            account_client: StorageAccountClient::new_access_key(
-                http_client.clone(),
-                &storage_account,
-                &key,
-            ),
+            client: storage_account_client.as_storage_client(),
+            account_client: storage_account_client,
             storage_account: storage_account,
         }
     }
