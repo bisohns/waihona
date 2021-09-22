@@ -13,7 +13,7 @@ pub enum BucketError {
     /// Credentials error
     CredError(String),
     /// Open error
-    OpenError(String)
+    OpenError(String),
 }
 
 /// Blob based errors

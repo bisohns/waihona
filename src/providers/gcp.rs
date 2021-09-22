@@ -120,7 +120,9 @@ impl Blob for GcpBlob {
             .await;
         match write {
             Ok(_) => Ok(true),
-            Err(e) => Err(BlobError::WriteError(String::from(format!("{}", e)))),
+            Err(e) => {
+                Err(BlobError::WriteError(String::from(format!("{}", e))))
+            }
         }
     }
 
@@ -193,7 +195,9 @@ impl Buckets<GcpBucket, GcpBlob> for GcpBuckets {
                 e_tag: a.etag.clone(),
                 self_link: a.self_link.clone(),
             }),
-            Err(e) => Err(BucketError::CreationError(String::from(format!("{}", e)))),
+            Err(e) => {
+                Err(BucketError::CreationError(String::from(format!("{}", e))))
+            }
         }
     }
 
@@ -202,7 +206,9 @@ impl Buckets<GcpBucket, GcpBlob> for GcpBuckets {
             let bucket = self.client.bucket().read(bucket_name).await.unwrap();
             match self.client.bucket().delete(bucket).await {
                 Ok(_) => Ok(true),
-                Err(e) => Err(BucketError::DeletionError(String::from(format!("{}", e)))),
+                Err(e) => Err(BucketError::DeletionError(String::from(
+                    format!("{}", e),
+                ))),
             }
         } else {
             Ok(false)
@@ -271,7 +277,9 @@ impl Bucket<GcpBlob> for GcpBucket {
                 }
                 Ok((ret, None))
             }
-            Err(_) => Err(BucketError::ListError(String::from("could not list"))),
+            Err(_) => {
+                Err(BucketError::ListError(String::from("could not list")))
+            }
         }
     }
     async fn get_blob(
@@ -327,7 +335,9 @@ impl Bucket<GcpBlob> for GcpBucket {
                     bucket.to_string(),
                     self.user_project.clone(),
                 )),
-                Err(e) => Err(BlobError::CopyError(String::from(format!("{}", e)))),
+                Err(e) => {
+                    Err(BlobError::CopyError(String::from(format!("{}", e))))
+                }
             }
         } else {
             return Err(BlobError::CopyError(String::from(
@@ -336,7 +346,11 @@ impl Bucket<GcpBlob> for GcpBucket {
         }
     }
 
-    async fn write_blob(&self, blob_name: &str, content: Option<Bytes>) -> BlobResult<GcpBlob> {
+    async fn write_blob(
+        &self,
+        blob_name: &str,
+        content: Option<Bytes>,
+    ) -> BlobResult<GcpBlob> {
         use bytes::Buf;
         use std::io;
 
@@ -346,7 +360,11 @@ impl Bucket<GcpBlob> for GcpBucket {
                 let mut reader = x.reader();
                 match io::copy(&mut reader, &mut file) {
                     Ok(_) => (),
-                    Err(e) => return Err(BlobError::WriteError(String::from(format!("{}", e)))),
+                    Err(e) => {
+                        return Err(BlobError::WriteError(String::from(
+                            format!("{}", e),
+                        )))
+                    }
                 }
             }
             None => (),
@@ -367,7 +385,9 @@ impl Bucket<GcpBlob> for GcpBucket {
                 self.name.clone(),
                 self.user_project.clone(),
             )),
-            Err(e) => Err(BlobError::WriteError(String::from(format!("{}", e)))),
+            Err(e) => {
+                Err(BlobError::WriteError(String::from(format!("{}", e))))
+            }
         }
     }
 
@@ -379,7 +399,9 @@ impl Bucket<GcpBlob> for GcpBucket {
             .await;
         match resp {
             Ok(_) => Ok(true),
-            Err(e) => Err(BlobError::DeletionError(String::from(format!("{}", e)))),
+            Err(e) => {
+                Err(BlobError::DeletionError(String::from(format!("{}", e))))
+            }
         }
     }
 }

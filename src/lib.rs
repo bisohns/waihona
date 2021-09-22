@@ -2,7 +2,7 @@
 //! It aims to provide simple to use functions to perform CRUD operations on
 //! buckets and blobs.
 //! Waihona simply means storage in Hawaiian
-//! 
+//!
 //!  ## Feature Flags
 //!  
 //!  The following feature flags exist for this crate
@@ -12,7 +12,7 @@
 //!
 //!  ## Traits
 //!
-//!  Three major traits control behaviour for each provider 
+//!  Three major traits control behaviour for each provider
 //!
 //!  Buckets -> Bucket -> Blob
 //!  
@@ -35,16 +35,16 @@
 //!         fn get_blob(&self, blob_path: &str, content_range: Option<String>);
 //!         fn copy_blob(&self, blob_path: &str, blob_destination_path: &str, content_type: Option<String>);
 //!         fn write_blob(&self, blob_name: &str, content: Option<Bytes>);
-//!         fn delete_blob(&self, blob_path: &str); 
+//!         fn delete_blob(&self, blob_path: &str);
 //!     }
 //!
 //!  trait Blob {
 //!      fn delete(&self);
 //!      fn copy(&self, blob_destination_path: &str, content_type: Option<String> );
-//!      fn write(&self, content: Option<Bytes>); 
+//!      fn write(&self, content: Option<Bytes>);
 //!      fn read(&mut self);
 //!     }
-//! 
+//!
 //!```
 //!  
 //! ## Examples
@@ -54,7 +54,7 @@
 //!
 //!
 //! List buckets from project waihona on GCP
-//! 
+//!
 //!
 //! ```no_run
 //! // ensure to export service credential using GOOGLE_APPLICATION_CREDENTIALS
@@ -168,8 +168,7 @@
 //!  }
 //!```
 
-pub mod types;
 pub mod providers;
 #[cfg(test)]
 pub mod tests;
-
+pub mod types;

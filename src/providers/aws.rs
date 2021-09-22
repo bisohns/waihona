@@ -1,25 +1,23 @@
+use crate::types::bucket::{Bucket, Buckets};
 use async_trait::async_trait;
-use regex::Regex;
 use bytes::Bytes;
-use crate::types::bucket::{Buckets, Bucket};
+use regex::Regex;
 //use futures::{StreamExt, TryStreamExt};
-use futures::{TryStreamExt};
-use crate::types::blob::{Blob};
-use crate::types::errors::{
-    BucketResult, BucketError, BlobResult,BlobError
-};
-use rusoto_core::{Region};
+use crate::types::blob::Blob;
+use crate::types::errors::{BlobError, BlobResult, BucketError, BucketResult};
+use futures::TryStreamExt;
+use rusoto_core::Region;
 use rusoto_s3::{
-    S3, S3Client, CreateBucketRequest, CreateBucketConfiguration,
-    DeleteBucketRequest, ListObjectsRequest, GetObjectRequest, StreamingBody,
-    DeleteObjectRequest, CopyObjectRequest, PutObjectRequest
+    CopyObjectRequest, CreateBucketConfiguration, CreateBucketRequest,
+    DeleteBucketRequest, DeleteObjectRequest, GetObjectRequest,
+    ListObjectsRequest, PutObjectRequest, S3Client, StreamingBody, S3,
 };
 
-pub struct AwsBuckets{
+pub struct AwsBuckets {
     s3: S3Client,
 }
 
-pub struct AwsBucket{
+pub struct AwsBucket {
     name: String,
     s3: S3Client,
 }
@@ -51,20 +49,18 @@ pub fn string_to_region(reg: &str) -> BucketResult<Region> {
         "cn-north-1" => Ok(Region::CnNorth1),
         "cn-northwest-1" => Ok(Region::CnNorthwest1),
         "af-south-1" => Ok(Region::AfSouth1),
-        _ => Err(BucketError::NotFound)
+        _ => Err(BucketError::NotFound),
     }
 }
 
 impl AwsBucket {
     pub fn new(name: String, s3: Option<S3Client>) -> Self {
         match s3 {
-            Some(a) => AwsBucket {name,s3: a},
-            None => {
-                AwsBucket {
-                    name,
-                    s3: S3Client::new(Region::UsEast2)
-                }
-            }
+            Some(a) => AwsBucket { name, s3: a },
+            None => AwsBucket {
+                name,
+                s3: S3Client::new(Region::UsEast2),
+            },
         }
     }
 }
@@ -80,14 +76,15 @@ pub struct AwsBlob {
     bucket: String,
 }
 impl AwsBlob {
-    pub fn new(key: Option<String>, 
-               e_tag: Option<String>, 
-               size: Option<i64>, 
-               body: Option<StreamingBody>, 
-               content_type: Option<String>,
-               content_range: Option<String>,
-               bucket: String,
-               ) -> Self {
+    pub fn new(
+        key: Option<String>,
+        e_tag: Option<String>,
+        size: Option<i64>,
+        body: Option<StreamingBody>,
+        content_type: Option<String>,
+        content_range: Option<String>,
+        bucket: String,
+    ) -> Self {
         AwsBlob {
             key,
             e_tag,
@@ -95,23 +92,22 @@ impl AwsBlob {
             body,
             content_type,
             content_range,
-            bucket
+            bucket,
         }
-
     }
 
-    pub async fn get(region: &str, bucket: &str, blob_path: &str, content_range: Option<String>) -> BlobResult<Self> {
+    pub async fn get(
+        region: &str,
+        bucket: &str,
+        blob_path: &str,
+        content_range: Option<String>,
+    ) -> BlobResult<Self> {
         let mut aws_buckets = AwsBuckets::new(region);
         let bucket_str = String::from(bucket);
         let bucket = aws_buckets.open(&bucket_str).await;
         match bucket {
-            Ok(b) => {
-                b.get_blob(
-                    blob_path,
-                    content_range
-                    ).await
-            },
-            Err(e) => Err(BlobError::GetError(e.to_string()))
+            Ok(b) => b.get_blob(blob_path, content_range).await,
+            Err(e) => Err(BlobError::GetError(e.to_string())),
         }
     }
 }
@@ -124,76 +120,63 @@ impl Blob for AwsBlob {
         match resp {
             Ok(_) => Ok(true),
             Err(e) => {
-                Err(BlobError::DeletionError(
-                    String::from(format!("{}",e))
-                    ))
-            },
+                Err(BlobError::DeletionError(String::from(format!("{}", e))))
+            }
         }
-
     }
 
-    async fn copy(&self,
-                    blob_destination_path: &str,
-                    content_type: Option<String>) -> BlobResult<bool> {
+    async fn copy(
+        &self,
+        blob_destination_path: &str,
+        content_type: Option<String>,
+    ) -> BlobResult<bool> {
         let bucket = AwsBucket::new(self.bucket.clone(), None);
-        let resp = bucket.copy_blob(
-            self.key.as_ref().unwrap(),
-            blob_destination_path,
-            content_type).await;
+        let resp = bucket
+            .copy_blob(
+                self.key.as_ref().unwrap(),
+                blob_destination_path,
+                content_type,
+            )
+            .await;
+        match resp {
+            Ok(_) => Ok(true),
+            Err(e) => Err(BlobError::CopyError(String::from(format!("{}", e)))),
+        }
+    }
+
+    async fn write(&self, content: Option<Bytes>) -> BlobResult<bool> {
+        let bucket = AwsBucket::new(self.bucket.clone(), None);
+        let resp = bucket.write_blob(self.key.as_ref().unwrap(), content).await;
         match resp {
             Ok(_) => Ok(true),
             Err(e) => {
-                Err(BlobError::CopyError(
-                    String::from(format!("{}",e))
-                    ))
-            },
+                Err(BlobError::WriteError(String::from(format!("{}", e))))
+            }
         }
-
-    }
-
-    async fn write(&self,
-                    content: Option<Bytes>) -> BlobResult<bool> {
-        let bucket = AwsBucket::new(self.bucket.clone(), None);
-        let resp = bucket.write_blob(
-            self.key.as_ref().unwrap(),
-            content).await;
-        match resp {
-            Ok(_) => Ok(true),
-            Err(e) => {
-                Err(BlobError::WriteError(
-                    String::from(format!("{}",e))
-                    ))
-            },
-        }
-
     }
 
     async fn read(&mut self) -> BlobResult<Bytes> {
         match self.body {
             Some(ref mut res) => {
-                let body = res.map_ok(|b| bytes::BytesMut::from(&b[..]))
+                let body = res
+                    .map_ok(|b| bytes::BytesMut::from(&b[..]))
                     .try_concat()
                     .await
                     .unwrap();
                 Ok(body.freeze())
-            },
-            None => {
-                Err(BlobError::ReadError)
             }
+            None => Err(BlobError::ReadError),
         }
     }
 }
-
 
 impl AwsBuckets {
     pub fn new(region: &str) -> Self {
         let reg = string_to_region(region).unwrap();
         AwsBuckets {
-            s3: S3Client::new(reg)
+            s3: S3Client::new(reg),
         }
-
     }
-
 }
 
 impl AwsBucket {
@@ -207,8 +190,11 @@ impl AwsBucket {
 impl Bucket<AwsBlob> for AwsBucket {
     /// Each AwsBlob does not have a body/content_type/content_range
     /// as those can only be gotten via a get_blob request
-    async fn list_blobs(&self, marker: Option<String>) -> BucketResult<(Vec<AwsBlob>, Option<String>)> {
-        let list_blob_req = ListObjectsRequest{
+    async fn list_blobs(
+        &self,
+        marker: Option<String>,
+    ) -> BucketResult<(Vec<AwsBlob>, Option<String>)> {
+        let list_blob_req = ListObjectsRequest {
             bucket: self.name.clone(),
             marker,
             ..Default::default()
@@ -219,42 +205,36 @@ impl Bucket<AwsBlob> for AwsBucket {
                 let contents = k.contents.unwrap();
                 let mut ret: Vec<AwsBlob> = Vec::new();
                 for obj in contents.iter() {
-                    ret.push(
-                        AwsBlob::new(
-                            obj.key.clone(),
-                            obj.e_tag.clone(),
-                            obj.size,
-                            None,
-                            None,
-                            None,
-                            self.name.clone()
-                            )
-                        )
+                    ret.push(AwsBlob::new(
+                        obj.key.clone(),
+                        obj.e_tag.clone(),
+                        obj.size,
+                        None,
+                        None,
+                        None,
+                        self.name.clone(),
+                    ))
                 }
                 Ok((ret, k.next_marker))
-            },
+            }
             Err(e) => {
-                Err(BucketError::ListError(
-                    String::from(format!("{}",e))
-                    ))
-            },
+                Err(BucketError::ListError(String::from(format!("{}", e))))
+            }
         }
     }
 
-    async fn copy_blob(&self, 
-                       blob_path: &str, 
-                       blob_destination_path: &str,
-                       content_type: Option<String>) -> BlobResult<AwsBlob> {
+    async fn copy_blob(
+        &self,
+        blob_path: &str,
+        blob_destination_path: &str,
+        content_type: Option<String>,
+    ) -> BlobResult<AwsBlob> {
         let copy_source = format!("{}/{}", self.name.clone(), blob_path);
         let re = Regex::new(r"(?P<bucket>.*?)/(?P<blob_path>.*)").unwrap();
         if let Some(captures) = re.captures(blob_destination_path) {
-            let bucket = captures
-                .name("bucket")
-                .unwrap().as_str().to_owned();
-            let key = captures
-                .name("blob_path")
-                .unwrap().as_str().to_owned();
-            let copy_blob_req = CopyObjectRequest{
+            let bucket = captures.name("bucket").unwrap().as_str().to_owned();
+            let key = captures.name("blob_path").unwrap().as_str().to_owned();
+            let copy_blob_req = CopyObjectRequest {
                 bucket: bucket.clone(),
                 key: key.clone(),
                 copy_source,
@@ -262,31 +242,31 @@ impl Bucket<AwsBlob> for AwsBucket {
             };
             let resp = self.s3.copy_object(copy_blob_req).await;
             match resp {
-                Ok(_) => Ok(
-                    AwsBlob::new(
-                        Some(key),
-                        None,
-                        None,
-                        None,
-                        content_type,
-                        None,
-                        bucket,
-                        )
-                    ),
+                Ok(_) => Ok(AwsBlob::new(
+                    Some(key),
+                    None,
+                    None,
+                    None,
+                    content_type,
+                    None,
+                    bucket,
+                )),
                 Err(e) => {
-                    Err(BlobError::CopyError(
-                            String::from(format!("{}",e))
-                            ))
-                },
+                    Err(BlobError::CopyError(String::from(format!("{}", e))))
+                }
             }
         } else {
-            return Err(BlobError::CopyError(
-                    String::from(r"Format blob_destination_path as {bucket}/{blob_path}")))
+            return Err(BlobError::CopyError(String::from(
+                r"Format blob_destination_path as {bucket}/{blob_path}",
+            )));
         }
     }
 
-    async fn write_blob(&self, blob_path: &str, content: Option<Bytes>) -> BlobResult<AwsBlob>
-    {
+    async fn write_blob(
+        &self,
+        blob_path: &str,
+        content: Option<Bytes>,
+    ) -> BlobResult<AwsBlob> {
         let put_blob_req = PutObjectRequest {
             bucket: self.name.to_owned(),
             key: blob_path.to_string(),
@@ -295,27 +275,23 @@ impl Bucket<AwsBlob> for AwsBucket {
         };
         let resp = self.s3.put_object(put_blob_req).await;
         match resp {
-            Ok(k) => Ok(
-                AwsBlob::new(
-                    Some(blob_path.to_string()),
-                    k.e_tag,
-                    None,
-                    None,
-                    None,
-                    None,
-                    self.name.to_owned()
-                    )
-                ),
+            Ok(k) => Ok(AwsBlob::new(
+                Some(blob_path.to_string()),
+                k.e_tag,
+                None,
+                None,
+                None,
+                None,
+                self.name.to_owned(),
+            )),
             Err(e) => {
-                Err(BlobError::WriteError(
-                    String::from(format!("{}",e))
-                    ))
-            },
+                Err(BlobError::WriteError(String::from(format!("{}", e))))
+            }
         }
     }
 
     async fn delete_blob(&self, blob_path: &str) -> BlobResult<bool> {
-        let delete_blob_req = DeleteObjectRequest{
+        let delete_blob_req = DeleteObjectRequest {
             bucket: self.name.clone(),
             key: blob_path.to_string(),
             ..Default::default()
@@ -324,15 +300,17 @@ impl Bucket<AwsBlob> for AwsBucket {
         match resp {
             Ok(_) => Ok(true),
             Err(e) => {
-                Err(BlobError::DeletionError(
-                    String::from(format!("{}",e))
-                    ))
-            },
+                Err(BlobError::DeletionError(String::from(format!("{}", e))))
+            }
         }
     }
 
-    async fn get_blob(&self, blob_path: &str, content_range: Option<String>) -> BlobResult<AwsBlob> {
-        let get_blob_req = GetObjectRequest{
+    async fn get_blob(
+        &self,
+        blob_path: &str,
+        content_range: Option<String>,
+    ) -> BlobResult<AwsBlob> {
+        let get_blob_req = GetObjectRequest {
             bucket: self.name.clone(),
             key: blob_path.to_string(),
             range: content_range,
@@ -348,15 +326,11 @@ impl Bucket<AwsBlob> for AwsBucket {
                     k.body,
                     k.content_type,
                     k.content_range,
-                    self.name.clone()
-                    );
+                    self.name.clone(),
+                );
                 Ok(blob)
-            },
-            Err(e) => {
-                Err(BlobError::GetError(
-                    String::from(format!("{}",e))
-                    ))
-            },
+            }
+            Err(e) => Err(BlobError::GetError(String::from(format!("{}", e)))),
         }
     }
 }
@@ -367,20 +341,20 @@ impl Buckets<AwsBucket, AwsBlob> for AwsBuckets {
         let resp = self.s3.list_buckets().await.unwrap();
         let mut buckets: Vec<AwsBucket> = Vec::new();
         for bucket in resp.buckets.unwrap().iter() {
-            if bucket.name.is_some(){
+            if bucket.name.is_some() {
                 let bucket_found = AwsBucket::new(
                     String::from(bucket.name.clone().unwrap()),
-                    Some(self.s3.clone())
-                    );
+                    Some(self.s3.clone()),
+                );
                 buckets.push(bucket_found);
             }
         }
         buckets
     }
 
-    async fn open(&mut self, bucket_name: &str) -> BucketResult<AwsBucket>{
+    async fn open(&mut self, bucket_name: &str) -> BucketResult<AwsBucket> {
         if self.exists(&bucket_name).await {
-            Ok(AwsBucket{
+            Ok(AwsBucket {
                 name: bucket_name.to_string(),
                 s3: self.s3.clone(),
             })
@@ -389,32 +363,33 @@ impl Buckets<AwsBucket, AwsBlob> for AwsBuckets {
         }
     }
 
-    async fn create(&mut self, bucket_name: &str, location: Option<String>) -> BucketResult<AwsBucket>{
-        let create_bucket_req = CreateBucketRequest{
+    async fn create(
+        &mut self,
+        bucket_name: &str,
+        location: Option<String>,
+    ) -> BucketResult<AwsBucket> {
+        let create_bucket_req = CreateBucketRequest {
             bucket: bucket_name.to_string(),
-            create_bucket_configuration: Some(CreateBucketConfiguration{
-                location_constraint: location
+            create_bucket_configuration: Some(CreateBucketConfiguration {
+                location_constraint: location,
             }),
             ..Default::default()
         };
         let resp = self.s3.create_bucket(create_bucket_req).await;
         match resp {
-            Ok(_) => Ok(AwsBucket{
+            Ok(_) => Ok(AwsBucket {
                 name: bucket_name.to_string(),
-                s3: self.s3.clone()
+                s3: self.s3.clone(),
             }),
             Err(e) => {
-                Err(BucketError::CreationError(
-                    String::from(format!("{}",e))
-                    ))
-            },
+                Err(BucketError::CreationError(String::from(format!("{}", e))))
+            }
         }
-
     }
 
     async fn delete(&mut self, bucket_name: &str) -> BucketResult<bool> {
         if self.exists(bucket_name).await {
-            let delete_bucket_req = DeleteBucketRequest{
+            let delete_bucket_req = DeleteBucketRequest {
                 bucket: bucket_name.to_string(),
                 ..Default::default()
             };
@@ -422,26 +397,22 @@ impl Buckets<AwsBucket, AwsBlob> for AwsBuckets {
             let resp = self.s3.delete_bucket(delete_bucket_req).await;
             match resp {
                 Ok(_) => Ok(true),
-                Err(e) => {
-                    Err(BucketError::DeletionError(
-                            String::from(format!("{}", e))
-                            ))
-                },
+                Err(e) => Err(BucketError::DeletionError(String::from(
+                    format!("{}", e),
+                ))),
             }
         } else {
             Err(BucketError::NotFound)
         }
-
     }
-    
+
     async fn exists(&mut self, bucket_name: &str) -> bool {
         let bucket_list = self.list().await;
         for bucket in bucket_list {
             if bucket.name == bucket_name {
-                return true
+                return true;
             }
         }
         false
     }
-
 }

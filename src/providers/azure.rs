@@ -39,7 +39,12 @@ impl AzureBucket {
         let response;
         match next_marker {
             Some(marker) => {
-                response = self.client.list_blobs().next_marker(marker).execute().await;
+                response = self
+                    .client
+                    .list_blobs()
+                    .next_marker(marker)
+                    .execute()
+                    .await;
             }
             None => {
                 response = self.client.list_blobs().execute().await;
@@ -109,7 +114,10 @@ impl AzureBuckets {
             .is_some()
     }
 
-    pub async fn open(&mut self, bucket_name: &str) -> BucketResult<AzureBucket> {
+    pub async fn open(
+        &mut self,
+        bucket_name: &str,
+    ) -> BucketResult<AzureBucket> {
         let response = self.client.list_containers().execute().await;
         match response
             .unwrap()
