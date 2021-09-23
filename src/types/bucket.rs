@@ -64,6 +64,7 @@ where
         &self,
         blob_name: &str,
         content: Option<Bytes>,
+        content_type: Option<String>,
     ) -> BlobResult<P>;
     /// Delete a blob from bucket
     async fn delete_blob(&self, blob_path: &str) -> BlobResult<bool>;

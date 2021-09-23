@@ -65,7 +65,10 @@ async fn test_container_read_blob() {
     let del = copied.delete().await.unwrap();
     assert!(del);
     let content = Some(Bytes::from(r"{'example': 1}"));
-    let mut new = waihona.write_blob("new.json", content).await.unwrap();
+    let mut new = waihona
+        .write_blob("new.json", content, Some("application/json".to_owned()))
+        .await
+        .unwrap();
     let read = new.read().await.unwrap();
     assert!(read.eq(&Bytes::from(r"{'example': 1}")));
 }
@@ -90,7 +93,14 @@ async fn test_copy_blob_from_azure_to_gcp() {
     let resp = gcp_buckets.open("mythra").await;
     let mythra = resp.unwrap();
     let content: Option<Bytes> = Some(azure_blob.read().await.unwrap());
-    let mut new = mythra.write_blob("Sent File.pdf", content).await.unwrap();
+    let mut new = mythra
+        .write_blob(
+            "Sent File.pdf",
+            content,
+            Some("application/pdf".to_owned()),
+        )
+        .await
+        .unwrap();
     let read = new.read().await.unwrap();
     let original_content = azure_blob.read().await.unwrap();
     assert!(read.eq(&Bytes::from(original_content)));

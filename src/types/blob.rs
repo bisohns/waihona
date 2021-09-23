@@ -15,7 +15,11 @@ pub trait Blob {
         content_type: Option<String>,
     ) -> BlobResult<bool>;
     /// Write to blob
-    async fn write(&self, content: Option<Bytes>) -> BlobResult<bool>;
+    async fn write(
+        &self,
+        content: Option<Bytes>,
+        content_type: Option<String>,
+    ) -> BlobResult<bool>;
     /// Read from blob
     async fn read(&mut self) -> BlobResult<Bytes>;
 }

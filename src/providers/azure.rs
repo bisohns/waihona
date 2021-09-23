@@ -74,10 +74,14 @@ impl Blob for AzureBlob {
         }
     }
 
-    async fn write(&self, content: Option<Bytes>) -> BlobResult<bool> {
+    async fn write(
+        &self,
+        content: Option<Bytes>,
+        content_type: Option<String>,
+    ) -> BlobResult<bool> {
         let mut buckets = AzureBuckets::new(self.storage_account.to_owned());
         let bucket = buckets.open(&self.container).await.unwrap();
-        let write = bucket.write_blob(&self.key, content).await;
+        let write = bucket.write_blob(&self.key, content, content_type).await;
         match write {
             Ok(_) => Ok(true),
             Err(e) => {
@@ -262,6 +266,7 @@ impl Bucket<AzureBlob> for AzureBucket {
         &self,
         blob_name: &str,
         content: Option<Bytes>,
+        content_type: Option<String>,
     ) -> BlobResult<AzureBlob> {
         use bytes::Buf;
         use std::io;
@@ -281,11 +286,16 @@ impl Bucket<AzureBlob> for AzureBucket {
             }
             None => (),
         }
+        let mime_type;
+        match content_type {
+            Some(c_type) => mime_type = c_type,
+            None => mime_type = "".to_owned(),
+        }
         let resp = self
             .client
             .as_blob_client(blob_name)
             .put_block_blob(file.clone())
-            .content_type("")
+            .content_type(mime_type.as_str())
             .execute()
             .await;
         match resp {

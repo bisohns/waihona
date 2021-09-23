@@ -112,11 +112,15 @@ impl Blob for GcpBlob {
         }
     }
 
-    async fn write(&self, content: Option<Bytes>) -> BlobResult<bool> {
+    async fn write(
+        &self,
+        content: Option<Bytes>,
+        content_type: Option<String>,
+    ) -> BlobResult<bool> {
         let mut buckets = GcpBuckets::new(&self.project);
         let bucket = buckets.open(&self.bucket).await.unwrap();
         let write = bucket
-            .write_blob(&self.key.as_ref().unwrap(), content)
+            .write_blob(&self.key.as_ref().unwrap(), content, content_type)
             .await;
         match write {
             Ok(_) => Ok(true),
@@ -350,6 +354,7 @@ impl Bucket<GcpBlob> for GcpBucket {
         &self,
         blob_name: &str,
         content: Option<Bytes>,
+        content_type: Option<String>,
     ) -> BlobResult<GcpBlob> {
         use bytes::Buf;
         use std::io;
@@ -369,10 +374,15 @@ impl Bucket<GcpBlob> for GcpBucket {
             }
             None => (),
         }
+        let mime_type;
+        match content_type {
+            Some(c_type) => mime_type = c_type,
+            None => mime_type = "".to_owned(),
+        }
         let resp = self
             .client
             .object()
-            .create(self.name.as_str(), file, blob_name, "")
+            .create(self.name.as_str(), file, blob_name, mime_type.as_str())
             .await;
         match resp {
             Ok(obj) => Ok(GcpBlob::new(

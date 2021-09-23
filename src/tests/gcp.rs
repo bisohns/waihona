@@ -66,7 +66,10 @@ async fn test_bucket_get_blob() {
     let del = copied.delete().await.unwrap();
     assert!(del);
     let content = Some(Bytes::from(r"{'example': 1}"));
-    let mut new = mythra.write_blob("new.json", content).await.unwrap();
+    let mut new = mythra
+        .write_blob("new.json", content, Some("application/json".to_owned()))
+        .await
+        .unwrap();
     let read = new.read().await.unwrap();
     assert!(read.eq(&Bytes::from(r"{'example': 1}")));
 }

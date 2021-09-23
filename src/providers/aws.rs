@@ -144,9 +144,15 @@ impl Blob for AwsBlob {
         }
     }
 
-    async fn write(&self, content: Option<Bytes>) -> BlobResult<bool> {
+    async fn write(
+        &self,
+        content: Option<Bytes>,
+        content_type: Option<String>,
+    ) -> BlobResult<bool> {
         let bucket = AwsBucket::new(self.bucket.clone(), None);
-        let resp = bucket.write_blob(self.key.as_ref().unwrap(), content).await;
+        let resp = bucket
+            .write_blob(self.key.as_ref().unwrap(), content, content_type)
+            .await;
         match resp {
             Ok(_) => Ok(true),
             Err(e) => {
@@ -266,10 +272,12 @@ impl Bucket<AwsBlob> for AwsBucket {
         &self,
         blob_path: &str,
         content: Option<Bytes>,
+        content_type: Option<String>,
     ) -> BlobResult<AwsBlob> {
         let put_blob_req = PutObjectRequest {
             bucket: self.name.to_owned(),
             key: blob_path.to_string(),
+            content_type,
             body: Some(content.unwrap().to_vec().into()),
             ..Default::default()
         };
