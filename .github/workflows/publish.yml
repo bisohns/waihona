@@ -17,8 +17,17 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+      - name: Set env
+        run:  echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
       - name: Test crates
-        run: cargo test -- --nocapture
+        run: |
+             sed -i 's/^version.*/version \= "'${RELEASE_VERSION:1}'"/' Cargo.toml
+             cargo test -- --nocapture &&
+             cargo install cargo-readme &&
+             cargo readme > README.md &&
+             git config --local user.email "waihona-actions[bot]@users.noreply.bisoncorps.com" &&
+             git config --local user.name "waihona-actions[bot]" &&
+             git commit -m "Updated version to ${{env.RELEASE_VERSION}}" -a
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
@@ -26,3 +35,8 @@ jobs:
       - uses: katyo/publish-crates@v1
         with:
           registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+      - name: Push Version To Main
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{secrets.GH_TOKEN}}
+          branch: main
