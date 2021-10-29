@@ -28,6 +28,7 @@ jobs:
              git config --local user.email "waihona-actions[bot]@users.noreply.bisoncorps.com" &&
              git config --local user.name "waihona-actions[bot]" &&
              git commit -m "Updated version to ${{env.RELEASE_VERSION}}" -a
+             git push
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
