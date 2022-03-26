@@ -3,7 +3,7 @@ use crate::types::bucket::{Bucket, Buckets};
 use crate::types::errors::{BlobError, BlobResult, BucketError, BucketResult};
 use async_trait::async_trait;
 use azure_core::prelude::*;
-use azure_storage::blob::prelude::*;
+use azure_storage_blobs::prelude::*;
 use azure_storage::core::prelude::*;
 use bytes::Bytes;
 use futures::stream::StreamExt;
@@ -13,7 +13,7 @@ use std::time::Duration;
 #[derive(Debug)]
 pub struct AzureBlob {
     key: String,
-    e_tag: Etag,
+    e_tag: azure_core::Etag,
     body: Option<Vec<u8>>,
     content_type: String,
     content_length: u64,
@@ -24,7 +24,7 @@ pub struct AzureBlob {
 impl AzureBlob {
     pub fn new(
         key: String,
-        e_tag: Etag,
+        e_tag: azure_core::Etag,
         body: Option<Vec<u8>>,
         content_type: String,
         content_length: u64,
@@ -324,7 +324,7 @@ impl AzureBuckets {
     pub fn new(storage_account: String) -> AzureBuckets {
         let key = std::env::var("AZURE_SECRET_ACCESS_KEY")
             .expect("Set env variable AZURE_SECRET_ACCESS_KEY");
-        let http_client = new_http_client();
+        let http_client = azure_core::new_http_client();
         let storage_account_client = StorageAccountClient::new_access_key(
             http_client.clone(),
             &storage_account,
@@ -333,7 +333,7 @@ impl AzureBuckets {
         AzureBuckets {
             client: storage_account_client.as_storage_client(),
             account_client: storage_account_client,
-            storage_account: storage_account,
+            storage_account,
         }
     }
 }
@@ -343,6 +343,7 @@ impl Buckets<AzureBucket, AzureBlob> for AzureBuckets {
     async fn list(&mut self) -> Vec<AzureBucket> {
         let response = self
             .client
+            .as_blob_service_client()
             .list_containers()
             .include_metadata(true)
             .execute()
@@ -360,7 +361,10 @@ impl Buckets<AzureBucket, AzureBlob> for AzureBuckets {
     }
 
     async fn exists(&mut self, bucket_name: &str) -> bool {
-        let containers = self.client.list_containers().execute().await;
+        let containers = self.client
+            .as_blob_service_client()
+            .list_containers()
+            .execute().await;
         containers
             .unwrap()
             .incomplete_vector
@@ -414,7 +418,10 @@ impl Buckets<AzureBucket, AzureBlob> for AzureBuckets {
     }
 
     async fn open(&mut self, bucket_name: &str) -> BucketResult<AzureBucket> {
-        let response = self.client.list_containers().execute().await;
+        let response = self.client
+            .as_blob_service_client()
+            .list_containers()
+            .execute().await;
         match response
             .unwrap()
             .incomplete_vector
