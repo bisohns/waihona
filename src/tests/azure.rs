@@ -56,7 +56,7 @@ async fn test_container_read_blob() {
     .unwrap();
     println!("Get Single Blob: {:?}", blob);
     let read = blob.read().await.unwrap();
-    println!("Reading Blob: {:?}", read);
+//    println!("Reading Blob: {:?}", read);
     let copied = waihona
         .copy_blob("CV latest.pdf", "waihona/copied.pdf", None)
         .await
